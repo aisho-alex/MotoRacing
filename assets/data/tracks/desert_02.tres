@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="TrackDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/track_def.gd" id="1_tdef"]
+
+[resource]
+script = ExtResource("1_tdef")
+id = "desert_02"
+display_name = "Desert II"
+biome = "desert"
+control_points = PackedVector3Array(-200.22, 0, 176.05, -210.38, 0, 110.7, -220.54, 0, 45.35, -230.7, 0, -20.0, -240.86, 0, -85.35, -167.96, 0, -134.29, -90.82, 0, -152.77, -24.34, 0, -164.16, 42.14, 0, -175.54, 108.61, 0, -186.93, 175.09, 0, -198.32, 219.37, 0, -149.33, 248.89, 0, -91.26, 235.12, 0, -22.75, 221.35, 0, 45.75, 207.58, 0, 114.26, 127.62, 0, 146.03, 58.87, 0, 159.08, 0.92, 0, 182.32, -67.85, 0, 211.11, -143.24, 0, 212.77)

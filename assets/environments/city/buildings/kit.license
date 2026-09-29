@@ -1,0 +1,27 @@
+asset: assets/environments/city/buildings/*.glb
+license: all models CC Attribution 4.0 unless noted; full credits also shown in-game (menu -> Credits)
+
+NeonTown set (bank, bar, pharmacy, restaurant, store):
+  author: bnishna — https://opengameart.org/content/neon-town — CC0 1.0
+  changes: grounded/footprint pivot (normalize_building.py)
+
+aptcomplex  — "Apartment Complex Building" by jimbogies (CC-BY 4.0)
+            https://sketchfab.com/3d-models/fa7c256f511946fea3cd819e0f492741
+brooklyn    — "Brooklyn Street Row Buildings Low Poly" by B0rn2D13 (CC-BY 4.0)
+            https://sketchfab.com/3d-models/370ca970f4cd4c638f95fe17617d0bc1
+chicago     — "Realistic chicago buildings" by 99.Miles (CC-BY 4.0)
+            https://sketchfab.com/3d-models/c4a3993ef1e84e6d9d5a15c78da88aae
+citybld     — "Game Ready City Buildings" by mireubay1 (CC-BY 4.0)
+            https://sketchfab.com/3d-models/12ac98aa701548adbfa463157f05f6cf
+oldapt      — "Old Apartment Building" by jimbogies (CC-BY 4.0)
+            https://sketchfab.com/3d-models/a2a27bec2e364496b34ae399ee93cb67
+rohbld      — "Low Poly Building" by roh3d (CC-BY 4.0)
+            https://sketchfab.com/3d-models/f943ba2828a64b7d858ee6e4bdacedc6
+urbanhouse  — "Lowpoly Urban House" by AspectStudio (CC-BY 4.0)
+            https://sketchfab.com/3d-models/789ae66d60154b74900f3586457abb9b
+largebld    — "Large Low Poly Building" by jimbogies (CC-BY 4.0)
+            https://sketchfab.com/3d-models/67b32912ff9d45c2a6ce5d32c72f69df
+
+changes (Sketchfab set): texture resize <=1024 (512 for props), grounded + footprint pivot,
+optional footprint clamp to 26 m (tools/assetgen/normalize_building.py)
+date: 2026-09-28

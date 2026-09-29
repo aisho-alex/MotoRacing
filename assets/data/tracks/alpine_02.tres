@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="TrackDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/track_def.gd" id="1_tdef"]
+
+[resource]
+script = ExtResource("1_tdef")
+id = "alpine_02"
+display_name = "Alpine II"
+biome = "alpine"
+control_points = PackedVector3Array(1.6, 0, 207.51, -63.95, 0, 168.41, -129.5, 0, 129.31, -195.06, 0, 90.21, -247.71, 0, 17.89, -223.47, 0, -56.71, -186.2, 0, -111.18, -173.31, 0, -183.57, -130.4, 0, -252.88, -42.33, 0, -242.52, 28.55, 0, -168.6, 74.61, 0, -122.49, 149.63, 0, -108.4, 231.11, 0, -58.42, 242.8, 0, 22.63, 201.5, 0, 84.31, 179.02, 0, 143.82, 159.19, 0, 223.87, 88.59, 0, 260.04)

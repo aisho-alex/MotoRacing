@@ -1,0 +1,6 @@
+asset: facade_a_emission.webp
+tool: procedural (tools/assetgen/gen_sdxl_tex.py)
+date: 2026-09-24
+rights: own work, CC0 (procedural synthesis, no third-party input)
+prompt: n/a (procedural)
+note: window mask derived from facade albedo luminance with deterministic light zones

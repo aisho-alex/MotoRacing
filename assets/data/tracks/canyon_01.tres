@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="TrackDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/track_def.gd" id="1_tdef"]
+
+[resource]
+script = ExtResource("1_tdef")
+id = "canyon_01"
+display_name = "Canyon"
+biome = "canyon"
+control_points = PackedVector3Array(44.71, 0, 261.96, -5.49, 0, 217.87, -55.7, 0, 173.78, -105.9, 0, 129.69, -156.1, 0, 85.6, -207.16, 0, 40.61, -199.01, 0, -16.59, -190.86, 0, -73.78, -182.7, 0, -130.98, -150.97, 0, -180.66, -92.24, 0, -190.43, -33.52, 0, -200.2, 25.21, 0, -209.96, 74.18, 0, -162.82, 118.88, 0, -128.04, 175.58, 0, -96.29, 224.34, 0, -43.98, 230.37, 0, 21.94, 197.02, 0, 75.25, 162.52, 0, 116.51, 142.23, 0, 170.2, 109.38, 0, 232.98)

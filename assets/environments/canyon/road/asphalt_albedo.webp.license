@@ -1,0 +1,7 @@
+asset: asphalt_albedo.webp
+tool: SwarmUI Z-Image Turbo + offset-heal seamless
+date: 2026-09-24
+rights: own work, CC0 (procedural synthesis, no third-party input)
+prompt: n/a (procedural)
+note: seed: 15264; score: 35.82; prompt: seamless tileable dusty grey-brown asphalt road surface, photorealistic, coarse aggregate stones, fine gravel, cracked tar patches with desert dust drift, seamless tileable texture, flat even diffuse lighting, top-down orthographic view, pbr albedo map, high detail
+note: post tint x0.777 (road/terrain readability)

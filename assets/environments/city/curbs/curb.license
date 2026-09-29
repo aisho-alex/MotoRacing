@@ -1,0 +1,8 @@
+asset: assets/environments/city/curbs/*.glb
+license: CC0 1.0 (public domain) — no attribution required, credited in-game (menu -> Credits)
+source: Kenney "City Kit (Roads)" — https://kenney.nl/assets/city-kit-roads
+  90 models, released 2021, updated 2.1 (road signs and traffic lights)
+changes: one-sided curb profile sliced out of road-straight-barrier.glb,
+  grounded (y=0), inner base at x=0, rescaled to width 0.18 m / height 0.18 m /
+  segment length 1.0 m (tools/assetgen/normalize_curb.py)
+date: 2026-09-28

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CarDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/car_def.gd" id="1_cdef"]
+
+[resource]
+script = ExtResource("1_cdef")
+model_path = "res://assets/cars/traffic_wagon2/body.glb"
+model_scale = 1.0
+model_yaw = 1.5707963
+model_y_offset = 0.0
+collision_size = Vector3(1.65, 0.95, 4.8)
+wheel_radius = 0.302
+livery_dir = "res://assets/cars/traffic_wagon2"
+livery_count = 0
+livery_index = 0

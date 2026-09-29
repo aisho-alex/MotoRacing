@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="TrackDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/track_def.gd" id="1_tdef"]
+
+[resource]
+script = ExtResource("1_tdef")
+id = "sakura_01"
+display_name = "Sakura"
+biome = "sakura"
+control_points = PackedVector3Array(-10.42, 0, -234.22, 57.08, 0, -204.49, 124.58, 0, -174.77, 192.08, 0, -145.04, 259.59, 0, -115.32, 279.44, 0, -33.39, 230.27, 0, 41.93, 166.21, 0, 86.35, 136.68, 0, 134.73, 116.55, 0, 216.73, 56.85, 0, 289.13, -30.34, 0, 287.35, -77.42, 0, 228.03, -124.49, 0, 168.72, -171.57, 0, 109.4, -231.32, 0, 63.64, -264.87, 0, -8.11, -246.53, 0, -84.34, -198.34, 0, -144.21, -144.47, 0, -192.83, -82.0, 0, -229.04)

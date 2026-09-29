@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CarDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/car_def.gd" id="1_cdef"]
+
+[resource]
+script = ExtResource("1_cdef")
+display_name = "Hyper 01"
+model_path = "res://assets/cars/hyper_01/body.glb"
+model_scale = 1.0
+model_yaw = 3.1415926
+model_y_offset = 0.0
+collision_size = Vector3(1.9, 0.9, 4.4)
+wheel_radius = 0.385
+livery_dir = "res://assets/cars/hyper_01"
+livery_count = 0
+livery_index = 0

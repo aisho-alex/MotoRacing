@@ -1,0 +1,6 @@
+asset: asphalt_orm.png
+tool: procedural synthesis (tools/assetgen/gen_road.py)
+date: 2026-09-24
+rights: own work, CC0 (procedural synthesis, no third-party input)
+prompt: n/a (procedural)
+note: AO from height, roughness 0.85-0.98, non-metallic

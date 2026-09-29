@@ -1,0 +1,7 @@
+asset: assets/cars/hyper_01/body.glb
+model: Ferrari 458 Italia
+author: JUSTGAME (https://sketchfab.com/JUSTGAME)
+source: https://sketchfab.com/3d-models/aa53bd0303014af2aa4d80341566ad8c
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/wheelbase pivot, corner-wheel naming, PBR material fixes (tools/assetgen/process_car.py)
+date: 2026-09-28

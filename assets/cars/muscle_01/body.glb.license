@@ -1,0 +1,7 @@
+asset: assets/cars/muscle_01/body.glb
+model: Phoenix 455 '71 - Low poly model
+author: DanielZhabotinsk (https://sketchfab.com/DanielZhabotinsk)
+source: https://sketchfab.com/3d-models/955edc733c6d44fabc0ad7c246a15896
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/wheelbase pivot, corner-wheel naming, PBR material fixes (tools/assetgen/process_car.py)
+date: 2026-09-28

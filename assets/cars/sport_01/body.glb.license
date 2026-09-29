@@ -1,0 +1,7 @@
+asset: assets/cars/sport_01/body.glb
+model: Asti Stradale '89 - Low poly model
+author: DanielZhabotinsk (https://sketchfab.com/DanielZhabotinsk)
+source: https://sketchfab.com/3d-models/97b15b067111443ebe05840137b49c65
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/wheelbase pivot, corner-wheel naming, PBR material fixes (tools/assetgen/process_car.py)
+date: 2026-09-28

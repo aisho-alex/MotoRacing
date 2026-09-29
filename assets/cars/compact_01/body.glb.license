@@ -1,0 +1,7 @@
+asset: assets/cars/compact_01/body.glb
+model: Milano '95 - Low poly model
+author: DanielZhabotinsk (https://sketchfab.com/DanielZhabotinsk)
+source: https://sketchfab.com/3d-models/122a22d210234596ad23623588d0d166
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/wheelbase pivot, corner-wheel naming, PBR material fixes (tools/assetgen/process_car.py)
+date: 2026-09-28

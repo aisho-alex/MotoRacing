@@ -1,0 +1,7 @@
+asset: assets/cars/traffic_sedan/body.glb
+model: Low Poly Car - BMW E46 1998
+author: roh3d (https://sketchfab.com/roh3d)
+source: https://sketchfab.com/3d-models/d9bfd8126e754164b48ded833c017bbf
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/wheelbase pivot, corner-wheel naming, PBR material fixes (tools/assetgen/process_car.py)
+date: 2026-09-28

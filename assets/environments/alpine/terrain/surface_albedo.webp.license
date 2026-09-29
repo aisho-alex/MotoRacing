@@ -1,0 +1,6 @@
+asset: surface_albedo.webp
+tool: SwarmUI Z-Image Turbo + offset-heal seamless
+date: 2026-09-24
+rights: own work, CC0 (procedural synthesis, no third-party input)
+prompt: n/a (procedural)
+note: seed: 17378; score: 5.75; prompt: seamless tileable clean snow surface texture, photorealistic, subtle wind packed texture and faint sparkle, soft blue tint in shallow dips, a few tiny ice crystals, seamless tileable texture, flat even diffuse lighting, top-down orthographic view, pbr albedo map, high detail

@@ -1,0 +1,6 @@
+asset: sky.hdr
+tool: procedural synthesis (tools/assetgen/gen_sky.py)
+date: 2026-09-24
+rights: own work, CC0 (procedural synthesis, no third-party input)
+prompt: n/a (procedural)
+note: alpine cold noon palette

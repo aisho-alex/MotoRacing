@@ -1,0 +1,7 @@
+asset: assets/cars/traffic_van/body.glb
+model: Shvan '92 - Low poly model
+author: DanielZhabotinsk (https://sketchfab.com/DanielZhabotinsk)
+source: https://sketchfab.com/3d-models/09d718c9cf72401b8534d265a06a803f
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/wheelbase pivot, corner-wheel naming, PBR material fixes (tools/assetgen/process_car.py)
+date: 2026-09-28

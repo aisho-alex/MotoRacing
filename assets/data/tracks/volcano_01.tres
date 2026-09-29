@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="TrackDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/track_def.gd" id="1_tdef"]
+
+[resource]
+script = ExtResource("1_tdef")
+id = "volcano_01"
+display_name = "Volcano"
+biome = "volcano"
+control_points = PackedVector3Array(-221.31, 0, -65.55, -164.84, 0, -103.65, -108.37, 0, -141.74, -51.9, 0, -179.83, 4.57, 0, -217.93, 73.16, 0, -246.99, 144.7, 0, -233.41, 187.74, 0, -169.33, 189.94, 0, -85.75, 179.46, 0, -16.47, 168.97, 0, 52.8, 158.49, 0, 122.08, 130.09, 0, 202.61, 68.09, 0, 254.98, -5.3, 0, 252.63, -62.41, 0, 210.7, -103.3, 0, 166.62, -148.41, 0, 133.87, -201.46, 0, 90.95, -235.11, 0, 18.94)
