@@ -7,9 +7,12 @@ extends CanvasLayer
 const BUTTON_DEFS := [
 	{"action": "steer_left", "label": "<", "left": true, "offset": Vector2(24, -170), "size": Vector2(130, 130)},
 	{"action": "steer_right", "label": ">", "left": true, "offset": Vector2(174, -170), "size": Vector2(130, 130)},
+	{"action": "attack_left", "label": "PL", "left": true, "offset": Vector2(70, -320), "size": Vector2(120, 120)},
+	{"action": "attack_right", "label": "PR", "left": true, "offset": Vector2(210, -320), "size": Vector2(120, 120)},
 	{"action": "brake", "label": "v", "left": false, "offset": Vector2(-310, -170), "size": Vector2(130, 130)},
 	{"action": "accelerate", "label": "^", "left": false, "offset": Vector2(-164, -170), "size": Vector2(130, 130)},
 	{"action": "nitro", "label": "N", "left": false, "offset": Vector2(-310, -316), "size": Vector2(130, 130)},
+	{"action": "kick", "label": "K", "left": false, "offset": Vector2(-164, -316), "size": Vector2(130, 130)},
 ]
 
 var _rects: Array[Rect2] = []

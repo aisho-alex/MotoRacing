@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="BikeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/bike_def.gd" id="1_bdef"]
+
+[resource]
+script = ExtResource("1_bdef")
+id = "cop_01"
+display_name = "Police"
+style = "super"
+body_color = Color(0.92, 0.93, 0.95, 1)
+accent_color = Color(0.06, 0.07, 0.1, 1)
+rider_color = Color(0.08, 0.09, 0.12, 1)
+helmet_color = Color(0.9, 0.91, 0.94, 1)
+lean_max = 30.0
+model_path = "res://assets/bikes/cop_01/body.glb"
+model_yaw = 1.5707963
+rider_mount = Vector3(0, 0.82, 0.06)
+collision_size = Vector3(0.9, 1.05, 2.35)
+wheel_radius = 0.33
+max_speed = 34.0
+accel = 17.0
+grip = 8.2
+steer_rate = 2.0

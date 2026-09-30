@@ -1,6 +1,6 @@
 class_name ChaseCamera
 extends Camera3D
-## Smooth follow camera that trails behind the car; FOV widens with speed.
+## Smooth follow camera that trails behind the bike; FOV widens with speed.
 
 var target: Node3D
 
@@ -29,7 +29,7 @@ func _physics_process(delta: float) -> void:
 	var lateral_speed := 0.0
 	var boosting := false
 	var max_spd := 32.0
-	if target is RaceCar:
+	if target is RaceBike:
 		spd = target.velocity.length()
 		lateral_speed = target.velocity.dot(target.global_transform.basis.x)
 		boosting = target.is_nitro_active()
@@ -120,13 +120,13 @@ func _build_speed_streaks() -> void:
 	add_child(_speed_streaks)
 
 
-func snap_behind(car: RaceCar) -> void:
-	target = car
-	var fwd: Vector3 = -car.global_transform.basis.z
+func snap_behind(bike: RaceBike) -> void:
+	target = bike
+	var fwd: Vector3 = -bike.global_transform.basis.z
 	fwd.y = 0.0
 	fwd = fwd.normalized()
-	global_position = car.global_position - fwd * _dist + Vector3.UP * _height
-	look_at(car.global_position + Vector3.UP * _look_height + fwd * 1.5, Vector3.UP)
+	global_position = bike.global_position - fwd * _dist + Vector3.UP * _height
+	look_at(bike.global_position + Vector3.UP * _look_height + fwd * 1.5, Vector3.UP)
 	fov = 60.0
 	_roll = 0.0
 	rotation.z = 0.0

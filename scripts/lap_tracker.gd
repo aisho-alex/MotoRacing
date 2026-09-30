@@ -1,6 +1,6 @@
 class_name LapTracker
 extends Node
-## Tracks the car's progress along the track centerline, counts laps,
+## Tracks the bike's progress along the track centerline, counts laps,
 ## measures lap times and detects backwards crossing / cutting.
 
 signal lap_changed(current_lap: int, total_laps: int)
@@ -11,7 +11,7 @@ const TOTAL_LAPS := 3
 const SEARCH_WINDOW := 30
 
 var track: TrackBuilder
-var car: RaceCar
+var bike: RaceBike
 
 var racing := false
 var finished := false
@@ -27,9 +27,9 @@ var _last_index := 0
 var _last_dist_sq := 0.0
 
 
-func setup(track_ref: TrackBuilder, car_ref: RaceCar) -> void:
+func setup(track_ref: TrackBuilder, bike_ref: RaceBike) -> void:
 	track = track_ref
-	car = car_ref
+	bike = bike_ref
 	_full_rescan()
 
 
@@ -62,7 +62,7 @@ func progress_metric() -> float:
 
 
 func _physics_process(delta: float) -> void:
-	if track == null or car == null:
+	if track == null or bike == null:
 		return
 	_update_nearest()
 	if racing and not finished:
@@ -98,7 +98,7 @@ static func _flat(p: Vector3) -> Vector2:
 
 
 func _update_nearest() -> void:
-	var p := _flat(car.global_position)
+	var p := _flat(bike.global_position)
 	var n := track.sample_count()
 	var best := INF
 	var best_i := _last_index
@@ -108,7 +108,7 @@ func _update_nearest() -> void:
 		if d < best:
 			best = d
 			best_i = i
-	if best > 625.0:  # car is far from the expected window: full scan
+	if best > 625.0:  # bike is far from the expected window: full scan
 		best_i = _full_rescan()
 		best = _flat(track.centerline[best_i]).distance_squared_to(p)
 	_last_index = best_i
@@ -116,11 +116,11 @@ func _update_nearest() -> void:
 	if best < (track.def.road_half_width + 2.0) * (track.def.road_half_width + 2.0):
 		var yaw := track.tangent_yaw(best_i)
 		var xf := Transform3D(Basis(Vector3.UP, yaw), track.centerline[best_i] + Vector3.UP * 0.6)
-		car.last_safe_transform = xf
+		bike.last_safe_transform = xf
 
 
 func _full_rescan() -> int:
-	var p := _flat(car.global_position)
+	var p := _flat(bike.global_position)
 	var best := INF
 	var best_i := 0
 	for i in track.sample_count():

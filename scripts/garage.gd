@@ -1,6 +1,6 @@
 extends Control
-## Garage: spend credits on per-car upgrades (engine / tires / nitro). Keyboard
-## (arrows, Enter, Esc) and mouse both work. Locked cars can be browsed but not
+## Garage: spend credits on per-bike upgrades (engine / tires / nitro). Keyboard
+## (arrows, Enter, Esc) and mouse both work. Locked bikes can be browsed but not
 ## upgraded. Up to three levels per part; stat bars preview the next level.
 
 const ACCENT := Color(1.0, 0.85, 0.25)
@@ -14,10 +14,10 @@ const STAT_ROWS := [
 ]
 const BAR_REF := 1.65  # full bar = base stat * BAR_REF (~maxed range plus margin)
 
-var car_pos := 0
+var bike_pos := 0
 var part_pos := 0
 
-var _car_label: Label
+var _bike_label: Label
 var _credits_label: Label
 var _hint_label: Label
 var _stat_rows: Array = []   # {bar: ProgressBar, value: Label}
@@ -25,17 +25,17 @@ var _part_rows: Array = []   # {level: Label, pips: ProgressBar, cost: Label, bu
 
 
 func _ready() -> void:
-	car_pos = Game.car_index
+	bike_pos = Game.bike_index
 	_build_ui()
 	_refresh()
 
 
-func _car_id() -> String:
-	return Game.CAR_IDS[car_pos]
+func _bike_id() -> String:
+	return Game.BIKE_IDS[bike_pos]
 
 
 func _part() -> String:
-	return CarTuning.PARTS[part_pos]
+	return BikeTuning.PARTS[part_pos]
 
 
 func _build_ui() -> void:
@@ -63,7 +63,7 @@ func _build_ui() -> void:
 	header.add_child(_credits_label)
 	box.add_child(header)
 
-	box.add_child(_car_row())
+	box.add_child(_bike_row())
 
 	var stats_panel := PanelContainer.new()
 	stats_panel.add_theme_stylebox_override("panel", _panel_style())
@@ -80,7 +80,7 @@ func _build_ui() -> void:
 	var parts := VBoxContainer.new()
 	parts.add_theme_constant_override("separation", 6)
 	parts.add_child(_label("UPGRADES", 22, DIM))
-	for i in CarTuning.PARTS.size():
+	for i in BikeTuning.PARTS.size():
 		parts.add_child(_part_row(i))
 	parts_panel.add_child(parts)
 	box.add_child(parts_panel)
@@ -95,20 +95,20 @@ func _build_ui() -> void:
 	box.add_child(back)
 
 
-func _car_row() -> HBoxContainer:
+func _bike_row() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 24)
-	row.add_child(_label("CAR", 32, DIM))
+	row.add_child(_label("BIKE", 32, DIM))
 	var prev := _button("<", 32)
-	prev.pressed.connect(_cycle_car.bind(-1))
+	prev.pressed.connect(_cycle_bike.bind(-1))
 	row.add_child(prev)
-	_car_label = _label("", 36, Color.WHITE)
-	_car_label.custom_minimum_size = Vector2(360, 0)
-	_car_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	row.add_child(_car_label)
+	_bike_label = _label("", 36, Color.WHITE)
+	_bike_label.custom_minimum_size = Vector2(360, 0)
+	_bike_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	row.add_child(_bike_label)
 	var next := _button(">", 32)
-	next.pressed.connect(_cycle_car.bind(1))
+	next.pressed.connect(_cycle_bike.bind(1))
 	row.add_child(next)
 	return row
 
@@ -130,17 +130,17 @@ func _stat_row(row: Dictionary) -> HBoxContainer:
 
 
 func _part_row(index: int) -> HBoxContainer:
-	var part: String = CarTuning.PARTS[index]
+	var part: String = BikeTuning.PARTS[index]
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 18)
-	var name := _label(CarTuning.PART_LABELS[part], 26, Color.WHITE)
+	var name := _label(BikeTuning.PART_LABELS[part], 26, Color.WHITE)
 	name.custom_minimum_size = Vector2(180, 0)
 	h.add_child(name)
 	var level := _label("", 24, Color.WHITE)
 	level.custom_minimum_size = Vector2(90, 0)
 	h.add_child(level)
 	var pips := _bar(0.0, ACCENT)
-	pips.max_value = CarTuning.MAX_LEVEL
+	pips.max_value = BikeTuning.MAX_LEVEL
 	pips.custom_minimum_size = Vector2(150, 16)
 	h.add_child(pips)
 	var cost := _label("", 24, DIM)
@@ -156,12 +156,12 @@ func _part_row(index: int) -> HBoxContainer:
 
 
 func _refresh() -> void:
-	var id := _car_id()
-	var unlocked := Game.is_car_unlocked(id)
-	_car_label.text = "%s%s" % [Game.car_def_by_id(id).display_name, "" if unlocked else "  [LOCKED]"]
+	var id := _bike_id()
+	var unlocked := Game.is_bike_unlocked(id)
+	_bike_label.text = "%s%s" % [Game.bike_def_by_id(id).display_name, "" if unlocked else "  [LOCKED]"]
 	_credits_label.text = "%d CR" % Game.credits
 
-	var base := Game.car_def_by_id(id)
+	var base := Game.bike_def_by_id(id)
 	var tuned := Game.tuned_def_for(id)
 	for i in STAT_ROWS.size():
 		var row: Dictionary = STAT_ROWS[i]
@@ -171,26 +171,26 @@ func _refresh() -> void:
 		widgets["bar"].value = clampf(current / (base_val * BAR_REF), 0.0, 1.0)
 		var text := "%.1f" % current
 		var part := String(row["part"])
-		if unlocked and part == _part() and Game.upgrade_level(id, part) < CarTuning.MAX_LEVEL:
+		if unlocked and part == _part() and Game.upgrade_level(id, part) < BikeTuning.MAX_LEVEL:
 			var next := _preview_def(base, id, part)
 			text += "  ->  %.1f" % float(next.get(row["prop"]))
 		widgets["value"].text = text
 
-	for i in CarTuning.PARTS.size():
+	for i in BikeTuning.PARTS.size():
 		_refresh_part_row(i, id, unlocked)
 
 	_hint_label.text = _hint_text(unlocked)
 
 
 func _refresh_part_row(index: int, id: String, unlocked: bool) -> void:
-	var part: String = CarTuning.PARTS[index]
+	var part: String = BikeTuning.PARTS[index]
 	var widgets: Dictionary = _part_rows[index]
 	var level := Game.upgrade_level(id, part)
 	var selected := index == part_pos
 	widgets["name"].label_settings.font_color = ACCENT if selected else Color.WHITE
-	widgets["level"].text = "LV %d/%d" % [level, CarTuning.MAX_LEVEL]
+	widgets["level"].text = "LV %d/%d" % [level, BikeTuning.MAX_LEVEL]
 	widgets["pips"].value = level
-	var maxed := level >= CarTuning.MAX_LEVEL
+	var maxed := level >= BikeTuning.MAX_LEVEL
 	if not unlocked:
 		widgets["cost"].text = "LOCKED"
 		widgets["buy"].text = "--"
@@ -208,27 +208,27 @@ func _refresh_part_row(index: int, id: String, unlocked: bool) -> void:
 	widgets["buy"].disabled = Game.credits < price
 
 
-func _preview_def(base: CarDef, id: String, part: String) -> CarDef:
+func _preview_def(base: BikeDef, id: String, part: String) -> BikeDef:
 	var levels := Game.upgrade_levels(id)
 	levels[part] = int(levels[part]) + 1
-	return CarTuning.apply(base, levels)
+	return BikeTuning.apply(base, levels)
 
 
 func _hint_text(unlocked: bool) -> String:
 	if not unlocked:
-		return Game.lock_hint(_car_id())
-	return "Arrows: car / upgrade    Enter: buy    Esc: menu"
+		return Game.lock_hint(_bike_id())
+	return "Arrows: bike / upgrade    Enter: buy    Esc: menu"
 
 
-func _cycle_car(dir: int) -> void:
-	car_pos = wrapi(car_pos + dir, 0, Game.CAR_IDS.size())
+func _cycle_bike(dir: int) -> void:
+	bike_pos = wrapi(bike_pos + dir, 0, Game.BIKE_IDS.size())
 	part_pos = 0
 	Audio.play_ui("click")
 	_refresh()
 
 
 func _cycle_part(dir: int) -> void:
-	part_pos = wrapi(part_pos + dir, 0, CarTuning.PARTS.size())
+	part_pos = wrapi(part_pos + dir, 0, BikeTuning.PARTS.size())
 	Audio.play_ui("click")
 	_refresh()
 
@@ -236,8 +236,8 @@ func _cycle_part(dir: int) -> void:
 func _buy_selected(index: int = -1) -> void:
 	if index >= 0:
 		part_pos = index
-	var id := _car_id()
-	if not Game.is_car_unlocked(id):
+	var id := _bike_id()
+	if not Game.is_bike_unlocked(id):
 		Audio.play_ui("click")
 		return
 	if Game.buy_upgrade(id, _part()):
@@ -256,9 +256,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		_go_back()
 	elif event.is_action_pressed("ui_left"):
-		_cycle_car(-1)
+		_cycle_bike(-1)
 	elif event.is_action_pressed("ui_right"):
-		_cycle_car(1)
+		_cycle_bike(1)
 	elif event.is_action_pressed("ui_up"):
 		_cycle_part(-1)
 	elif event.is_action_pressed("ui_down"):

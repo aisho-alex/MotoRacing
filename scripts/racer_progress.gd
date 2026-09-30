@@ -1,11 +1,11 @@
 class_name RacerProgress
 extends RefCounted
-## Lightweight per-car progress along the track (nearest sample + lap count),
+## Lightweight per-bike progress along the track (nearest sample + lap count),
 ## used for live race positions of AI opponents.
 
 const WINDOW := 30
 
-var car: RaceCar
+var bike: RaceBike
 var track: TrackBuilder
 var laps := 0
 
@@ -14,7 +14,7 @@ var _prog := 0.0
 
 
 func reset() -> void:
-	var p := _flat(car.global_position)
+	var p := _flat(bike.global_position)
 	var best := INF
 	var best_i := 0
 	for i in track.sample_count():
@@ -32,7 +32,7 @@ func progress_metric() -> float:
 
 
 func update() -> void:
-	var p := _flat(car.global_position)
+	var p := _flat(bike.global_position)
 	var n := track.sample_count()
 	var best := INF
 	var best_i := _nearest

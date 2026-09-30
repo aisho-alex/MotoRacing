@@ -1,8 +1,8 @@
 class_name AiDriver
 extends RefCounted
-## Track-following AI with car avoidance: aims at a speed-scaled lookahead
+## Track-following AI with bike avoidance: aims at a speed-scaled lookahead
 ## point on a personal corridor (line_offset) beside the centerline, brakes
-## for curvature AND for cars ahead, nitros on straights, and un-sticks
+## for curvature AND for bikes ahead, nitros on straights, and un-sticks
 ## itself after being blocked.
 
 const STUCK_TIME := 1.4
@@ -11,14 +11,21 @@ const NITRO_MIN_RATIO := 0.5
 const AHEAD_RANGE := 9.0
 const AHEAD_HALF_WIDTH := 2.1
 const DETOUR_TRIGGER := 1.1    # seconds blocked before committing to a pass
+const OVERTAKE_TRIGGER := 0.7  # racing-speed overtake of a slower blocker
+const OVERTAKE_GAP := 6.0      # m/s slower than our pace = worth passing
 const DETOUR_TIME := 3.0
 const DETOUR_OFFSET := 2.8
 
 var track: TrackBuilder
 var skill := 0.95       # 0..1, scales target speed
 var speed_mult := 1.0   # extra pace from player upgrades (AI rubber-banding)
+var base_speed_mult := 1.0  # pace before the dynamic rubber-band
 var line_offset := 0.0  # personal corridor beside the centerline (meters)
-var cars: Array[RaceCar] = []  # all racers, for avoidance
+var bikes: Array = []  # all racers, for avoidance / combat
+var attack_side := 0.0           # set by decide_attack(): +1 right, -1 left
+var attack_kind := ""            # "punch" / "kick" / "" (none)
+var aggression := 0.45           # 0..1 chance to swing when an opponent is close
+var chase: Node3D = null         # police: ride the chased rider's line
 
 var _nearest := 0
 var _stuck_time := 0.0
@@ -27,7 +34,7 @@ var _block_timer := 0.0
 var _detour_time := 0.0
 var _detour_side := 1.0
 var _center_hug := 0.0  # seconds of centerline preference after wall contact
-var _last_good_i := 0   # last sample where the car had real speed
+var _last_good_i := 0   # last sample where the bike had real speed
 var _stall_time := 0.0
 var _wrong_time := 0.0
 var _last_progress_i := 0
@@ -50,8 +57,8 @@ func _init(track_ref: TrackBuilder, skill_mult: float = 0.95, offset: float = 0.
 
 
 ## Full rescan of the nearest sample — call after any teleport (spawn, restart).
-func resync(car: RaceCar) -> void:
-	var p := car.global_position
+func resync(bike: RaceBike) -> void:
+	var p := bike.global_position
 	var best := INF
 	for i in track.sample_count():
 		var d := track.centerline[i].distance_squared_to(p)
@@ -70,10 +77,10 @@ func resync(car: RaceCar) -> void:
 
 
 ## Returns (steer, throttle, want_nitro).
-func drive(car: RaceCar, delta: float) -> Vector3:
-	_track_nearest(car)
-	var fwd := -car.global_transform.basis.z
-	var vf := car.velocity.dot(fwd)
+func drive(bike: RaceBike, delta: float) -> Vector3:
+	_track_nearest(bike)
+	var fwd := -bike.global_transform.basis.z
+	var vf := bike.velocity.dot(fwd)
 
 	# watchdog: progress must advance sample-to-sample; otherwise reset ahead.
 	# This makes any kind of stall (wall grind, donut, jam) impossible.
@@ -85,7 +92,7 @@ func drive(car: RaceCar, delta: float) -> Vector3:
 	if _nearest != _last_progress_i:
 		_last_progress_i = _nearest
 		_stall_time = 0.0
-	elif car.control_enabled and _teleport_cooldown <= 0.0:
+	elif bike.control_enabled and _teleport_cooldown <= 0.0:
 		_stall_time += delta
 	if _stall_time > 2.0:
 		_stall_time = 0.0
@@ -93,13 +100,13 @@ func drive(car: RaceCar, delta: float) -> Vector3:
 		teleports += 1
 		var n := track.sample_count()
 		var i := (_nearest + 8) % n
-		car.reset_to(track.centerline[i] + track.side_vector(i) * line_offset,
+		bike.reset_to(track.centerline[i] + track.side_vector(i) * line_offset,
 			track.tangent_yaw(i))
-		resync(car)
+		resync(bike)
 		_center_hug = 1.0
 		return Vector3.ZERO
 
-	if car.control_enabled and absf(vf) < 1.0:
+	if bike.control_enabled and absf(vf) < 1.0:
 		_stuck_time += delta
 	else:
 		_stuck_time = 0.0
@@ -107,12 +114,12 @@ func drive(car: RaceCar, delta: float) -> Vector3:
 		_reverse_time = REVERSE_TIME
 		_stuck_time = 0.0
 
-	var avoid := _avoidance(car)
+	var avoid := _avoidance(bike)
 	if _center_hug > 0.0:
 		_center_hug -= delta
 
 	# wrong way: facing against the track. Reversing would just lap the track
-	# backwards, so after 1s of wrong-way snap the car onto the line facing
+	# backwards, so after 1s of wrong-way snap the bike onto the line facing
 	# forward (deterministic, no swing dynamics to get stuck in).
 	var tangent := track.tangents[_nearest]
 	var facing := fwd.dot(tangent)
@@ -124,23 +131,28 @@ func drive(car: RaceCar, delta: float) -> Vector3:
 			var rn := track.sample_count()
 			var ri := (_nearest + 12) % rn
 			wrong_snaps += 1
-			car.reset_to(track.centerline[ri] + track.side_vector(ri) * line_offset,
+			bike.reset_to(track.centerline[ri] + track.side_vector(ri) * line_offset,
 				track.tangent_yaw(ri))
-			resync(car)
+			resync(bike)
 			_center_hug = 1.0
 			return Vector3.ZERO
 		if vf > 1.0:
 			return Vector3(0.0, -1.0, false)  # brake before pivoting
-		return Vector3(clampf(_steer_to_offset(car, line_offset, 30), -1.0, 1.0), 0.6, false)
+		return Vector3(clampf(_steer_to_offset(bike, line_offset, 30), -1.0, 1.0), 0.6, false)
 	_wrong_time = 0.0
 	_last_progress_i = _nearest
 
-	# committed pass around a blocker that keeps us crawling
-	if avoid.blocked and vf < 3.0 and _reverse_time <= 0.0:
+	# pass a blocker that keeps us crawling (emergency) OR is much slower than
+	# our own pace (racing overtake, do not just sit behind it)
+	var blocked_now: bool = avoid.blocked and _reverse_time <= 0.0
+	var must_pass: bool = blocked_now and vf < 3.0
+	var want_pass: bool = blocked_now and _blocker_much_slower(bike, avoid)
+	if must_pass or want_pass:
 		_block_timer += delta
 	else:
 		_block_timer = maxf(_block_timer - 2.0 * delta, 0.0)
-	if _block_timer > DETOUR_TRIGGER:
+	var trigger := DETOUR_TRIGGER if must_pass else OVERTAKE_TRIGGER
+	if _block_timer > trigger:
 		_detour_time = DETOUR_TIME
 		_detour_side = -avoid.blocker_side
 		_block_timer = 0.0
@@ -150,29 +162,77 @@ func drive(car: RaceCar, delta: float) -> Vector3:
 		_reverse_time -= delta
 		_center_hug = 1.5  # prefer the centerline for a bit after wall contact
 		# back out while swinging the nose toward the track direction
-		return Vector3(clampf(-_steer_to_offset(car, 0.0, 25) - avoid.bias, -1.0, 1.0), -1.0, false)
+		return Vector3(clampf(-_steer_to_offset(bike, 0.0, 25) - avoid.bias, -1.0, 1.0), -1.0, false)
 
 	# arcade steering needs speed to turn: without motion, reverse first
 	if _detour_time > 0.0:
 		frames_detour += 1
 		_detour_time -= delta
 		if vf >= -0.5:
-			return Vector3(_steer_to_offset(car, 2.8 * _detour_side), 1.0, false)
+			return Vector3(_steer_to_offset(bike, 2.8 * _detour_side), 1.0, false)
 		_reverse_time = maxf(_reverse_time, 0.7)
-		return Vector3(-_steer_to_offset(car, 2.8 * _detour_side), -1.0, false)
+		return Vector3(-_steer_to_offset(bike, 2.8 * _detour_side), -1.0, false)
 
 	var eff_offset := line_offset
 	if _center_hug > 0.0:
 		eff_offset = lerpf(line_offset, 0.0, 0.7)
-	# hug the inside of an upcoming bend (racing line): keeps the car off the
+	# Police pursuit: aim at the chased rider's line instead of our own corridor.
+	if chase != null and is_instance_valid(chase):
+		var cl: float = (chase.global_position - track.centerline[_nearest]).dot(track.side_vector(_nearest))
+		eff_offset = clampf(cl, -3.5, 3.5)
+	# hug the inside of an upcoming bend (racing line): keeps the bike off the
 	# outer wall instead of drifting wide at the bend exit
 	var bend := _bend_sign()
 	if absf(bend) > 0.5 and _curvature_ahead() > 0.04:
 		eff_offset = clampf(eff_offset + bend * 1.5, -3.5, 3.5)
-	var steer := clampf(_steer_to_offset(car, eff_offset, ahead_samples(vf)) + avoid.bias * 0.7, -1.0, 1.0)
-	var lat_self := (car.global_position - track.centerline[_nearest]).dot(track.side_vector(_nearest))
+	var steer := clampf(_steer_to_offset(bike, eff_offset, ahead_samples(vf)) + avoid.bias * 0.7, -1.0, 1.0)
+	var lat_self := (bike.global_position - track.centerline[_nearest]).dot(track.side_vector(_nearest))
+	# While lining up an overtake do not brake down to the blocker's pace.
+	var slow_eff: float = avoid.slow
+	if want_pass:
+		slow_eff = maxf(slow_eff, 0.9)
 	frames_normal += 1
-	return Vector3(steer, _throttle(car, vf, avoid.slow, lat_self), _nitro(car, vf, avoid.slow))
+	return Vector3(steer, _throttle(bike, vf, slow_eff, lat_self), _nitro(bike, vf, slow_eff))
+
+
+## True when the bike blocking us ahead is clearly slower than our own pace,
+## so we should overtake instead of matching its speed.
+func _blocker_much_slower(bike: RaceBike, avoid: Dictionary) -> bool:
+	if not avoid.has("blocker_speed"):
+		return false
+	var my_pace: float = bike.def.max_speed * skill * speed_mult
+	return my_pace - float(avoid["blocker_speed"]) > OVERTAKE_GAP
+
+
+## Road Rash AI: swing at a bike that sits beside/ahead of us. Called every
+## physics frame by RaceBike; the bike itself enforces the attack cooldown.
+## Retaliation: a rider who just hit us becomes the priority target.
+func decide_attack(bike: RaceBike, _delta: float) -> void:
+	attack_side = 0.0
+	attack_kind = ""
+	if not bike.control_enabled or bike.wiped_out_now:
+		return
+	if bike.grudge_timer > 0.0 and is_instance_valid(bike.attacker) and not bike.attacker.wiped_out_now:
+		var g: Vector3 = bike.global_transform.basis.inverse() * (bike.attacker.global_position - bike.global_position)
+		if absf(g.z) < 3.0 and absf(g.x) < 2.4:
+			attack_side = signf(g.x) if absf(g.x) > 0.05 else (1.0 if randf() < 0.5 else -1.0)
+			attack_kind = "kick" if absf(g.z) < 1.5 and randf() < 0.4 else "punch"
+			return
+	for other in bikes:
+		if other == bike or not is_instance_valid(other) or other.wiped_out_now:
+			continue
+		if not other.control_enabled:
+			continue
+		var local: Vector3 = bike.global_transform.basis.inverse() * (other.global_position - bike.global_position)
+		if absf(local.z) < 2.2 and absf(local.x) < 1.8 and local.z < 0.7:
+			# wheel-to-wheel: more eager to throw a hit
+			var aggr: float = aggression
+			if absf(local.x) < 1.0:
+				aggr = minf(aggr + 0.25, 0.95)
+			if randf() < aggr:
+				attack_side = signf(local.x) if absf(local.x) > 0.05 else (1.0 if randf() < 0.5 else -1.0)
+				attack_kind = "kick" if absf(local.z) < 1.3 and randf() < 0.35 else "punch"
+			return
 
 
 func ahead_samples(vf: float) -> int:
@@ -182,9 +242,9 @@ func ahead_samples(vf: float) -> int:
 	return ahead
 
 
-func _track_nearest(car: RaceCar) -> void:
+func _track_nearest(bike: RaceBike) -> void:
 	var n := track.sample_count()
-	var pos := car.global_position
+	var pos := bike.global_position
 	var best := INF
 	for k in range(-10, 11):
 		var i := (_nearest + k + n) % n
@@ -194,94 +254,102 @@ func _track_nearest(car: RaceCar) -> void:
 			_nearest = i
 
 
-## Cars ahead IN OUR LANE slow us down and push the aim aside; ghosts in
+## Bikes ahead IN OUR LANE slow us down and push the aim aside; ghosts in
 ## other corridors are ignored (they will pass through harmlessly).
 ## Additionally, any wall contact adds strong steering AWAY from the wall —
-## otherwise a car sliding along a wall keeps its aim parallel and grinds
+## otherwise a bike sliding along a wall keeps its aim parallel and grinds
 ## forever at crawl speed.
-func _avoidance(car: RaceCar) -> Dictionary:
+func _avoidance(bike: RaceBike) -> Dictionary:
 	var slow := 1.0
 	var bias := 0.0
 	var blocked := false
 	var blocker_side := 1.0
+	var blocker_speed := 1e9
 	var n := track.sample_count()
 	var here := track.centerline[_nearest]
 	var side := track.side_vector(_nearest)
-	for other in cars:
-		if other == car or not is_instance_valid(other):
+	for other in bikes:
+		if other == bike or not is_instance_valid(other):
 			continue
-		var to := other.global_position - car.global_position
-		var local := car.global_transform.basis.inverse() * to
+		var to: Vector3 = other.global_position - bike.global_position
+		var local: Vector3 = bike.global_transform.basis.inverse() * to
 		if local.z > -AHEAD_RANGE and local.z < -0.5 and absf(local.x) < AHEAD_HALF_WIDTH:
-			var other_lat := (other.global_position - here).dot(side)
+			var other_lat: float = (other.global_position - here).dot(side)
 			if absf(other_lat - line_offset) > 1.9:
 				continue  # different lane
-			var gap := -local.z
+			var gap: float = -local.z
 			slow = minf(slow, clampf((gap - 2.5) / (AHEAD_RANGE - 2.5), 0.0, 1.0))
 			bias += -signf(local.x + 0.001) * 0.8
 			if gap < 5.0:
 				blocked = true
 				blocker_side = signf(local.x + 0.001)
+				blocker_speed = minf(blocker_speed, _forward_speed(other))
 	# count wall contacts only: the ground is a StaticBody3D as well, so
 	# require a contact normal that is not pointing up
-	for k in car.get_slide_collision_count():
-		var col := car.get_slide_collision(k)
+	for k in bike.get_slide_collision_count():
+		var col := bike.get_slide_collision(k)
 		if col.get_collider() is StaticBody3D and col.get_normal().y < 0.7:
 			wall_hits += 1
 			break
 	# drifting wide: steer back toward the centerline before the wall
-	var lat_self := (car.global_position - here).dot(side)
-	if absf(lat_self) > car.road_half_width - 1.2:
+	var lat_self := (bike.global_position - here).dot(side)
+	if absf(lat_self) > bike.road_half_width - 1.2:
 		bias += signf(lat_self) * 1.2
-	return {"slow": slow, "bias": clampf(bias, -1.2, 1.2), "blocked": blocked, "blocker_side": blocker_side}
+	return {"slow": slow, "bias": clampf(bias, -1.2, 1.2), "blocked": blocked,
+		"blocker_side": blocker_side, "blocker_speed": blocker_speed}
+
+
+## Forward speed (m/s) of another bike, for pass decisions.
+func _forward_speed(other: RaceBike) -> float:
+	return other.velocity.dot(-other.global_transform.basis.z)
 
 
 ## Aim at the sample `ahead` samples forward, offset sideways by `off` meters.
 ## Pure pursuit as a curvature command: k = 2*sin(alpha)/distance needs the
-## yaw rate speed*k, and dividing by the car's real yaw authority keeps the
+## yaw rate speed*k, and dividing by the bike's real yaw authority keeps the
 ## controller from over-gaining — a fixed angle*gain diverges at low speed and
-## spins the car onto the wrong way.
-func _steer_to_offset(car: RaceCar, off: float, ahead: int = 6) -> float:
+## spins the bike onto the wrong way.
+func _steer_to_offset(bike: RaceBike, off: float, ahead: int = 6) -> float:
 	var n := track.sample_count()
 	var aim := (_nearest + ahead) % n
 	var target := track.centerline[aim] + track.side_vector(aim) * off
-	var to := target - car.global_position
+	var to := target - bike.global_position
 	to.y = 0.0
 	var dist := maxf(to.length(), 0.5)
-	var local := car.global_transform.basis.inverse() * to
+	var local := bike.global_transform.basis.inverse() * to
 	var curvature := 2.0 * sin(atan2(local.x, -local.z)) / dist
-	var speed := absf(car.velocity.dot(-car.global_transform.basis.z))
-	var authority := car.def.steer_rate \
+	var speed := absf(bike.velocity.dot(-bike.global_transform.basis.z))
+	var authority := bike.def.steer_rate \
 		* clampf(speed / 7.0, 0.1, 1.0) \
-		* (1.0 - 0.45 * clampf(speed / car.def.max_speed, 0.0, 1.0))
+		* (1.0 - 0.45 * clampf(speed / bike.def.max_speed, 0.0, 1.0))
 	return clampf(speed * curvature / maxf(authority, 0.05), -1.0, 1.0)
 
 
 ## Arcade magnetism: when roughly facing forward and not in a recovery
 ## maneuver, pull the body toward the lane center and damp lateral velocity.
 ## Keeps opponents off the walls regardless of steering dynamics.
-func lane_pull(car: RaceCar, delta: float) -> void:
+func lane_pull(bike: RaceBike, delta: float) -> void:
 	if _reverse_time > 0.0 or _wrong_time > 0.0:
 		return
 	var here := track.centerline[_nearest]
 	var side := track.side_vector(_nearest)
-	var fwd := -car.global_transform.basis.z
+	var fwd := -bike.global_transform.basis.z
 	if fwd.dot(track.tangents[_nearest]) < 0.4:
 		return
-	# the corridor the car is actually aiming at: the detour lane while
+	# the corridor the bike is actually aiming at: the detour lane while
 	# passing a blocker, its personal lane otherwise
 	var corridor := line_offset
 	if _detour_time > 0.0:
 		corridor = DETOUR_OFFSET * _detour_side
-	var err := (car.global_position - here).dot(side) - corridor
+	var err := (bike.global_position - here).dot(side) - corridor
 	if absf(err) < 0.2 or absf(err) > 7.0:
 		return
-	var vlat := car.velocity.dot(side)
-	car.velocity -= side * (vlat * clampf(delta * 6.0, 0.0, 1.0))
-	# pull harder the further off-corridor the car is, so one wedged against
+	var vlat := bike.velocity.dot(side)
+	bike.velocity -= side * (vlat * clampf(delta * 6.0, 0.0, 1.0))
+	# pull harder the further off-corridor the bike is, so one wedged against
 	# a wall always works its way back onto the road
 	var gain := 1.0 + clampf((absf(err) - 2.0) / 3.0, 0.0, 1.0) * 1.2
-	car.global_position -= side * (err * gain * delta)
+	bike.global_position -= side * (err * gain * delta)
 
 
 func _curvature_ahead() -> float:
@@ -293,7 +361,7 @@ func _curvature_ahead() -> float:
 	return worst
 
 
-## Bend direction: +1 when the upcoming turn goes toward the car's left
+## Bend direction: +1 when the upcoming turn goes toward the bike's left
 ## (+side_vector), -1 for a right turn, ~0 on a straight.
 func _bend_sign() -> float:
 	var n := track.sample_count()
@@ -304,33 +372,33 @@ func _bend_sign() -> float:
 
 ## Corner speed limit from the estimated bend radius: the tangent angle over
 ## k samples gives R = spacing*k/angle, and v stays within sqrt(lat_acc * R).
-func _corner_speed(car: RaceCar) -> float:
+func _corner_speed(bike: RaceBike) -> float:
 	var n := track.sample_count()
 	var k := 12
 	var t0: Vector3 = track.tangents[_nearest]
 	var t1: Vector3 = track.tangents[(_nearest + k) % n]
 	var ang := t0.angle_to(t1)
 	if ang < 0.08:
-		return car.def.max_speed
+		return bike.def.max_speed
 	var radius := track.sample_spacing(_nearest) * float(k) / maxf(ang, 0.05)
 	return sqrt(14.0 * radius)
 
 
-func _throttle(car: RaceCar, vf: float, slow: float, lat: float = 0.0) -> float:
-	var target_speed := minf(car.def.max_speed * skill * speed_mult, _corner_speed(car))
+func _throttle(bike: RaceBike, vf: float, slow: float, lat: float = 0.0) -> float:
+	var target_speed := minf(bike.def.max_speed * skill * speed_mult, _corner_speed(bike))
 	target_speed *= lerpf(0.15, 1.0, slow)
-	if absf(lat) > car.road_half_width - 2.0:
+	if absf(lat) > bike.road_half_width - 2.0:
 		target_speed *= 0.7  # near a wall: leave steering margin
-	if OS.get_environment("AI_DEBUG") != "" and car.name == "AI2":
+	if OS.get_environment("AI_DEBUG") != "" and bike.name == "AI2":
 		print("THR vf=", vf, " slow=", slow, " target=", target_speed,
-			" near=", _nearest, " cars=", cars.size())
+			" near=", _nearest, " bikes=", bikes.size())
 	if vf < target_speed:
 		return 1.0
 	return clampf((target_speed - vf) / 4.0, -1.0, 0.0)
 
 
-func _nitro(car: RaceCar, vf: float, slow: float) -> bool:
+func _nitro(bike: RaceBike, vf: float, slow: float) -> bool:
 	return slow > 0.99 \
 		and _curvature_ahead() < 0.02 \
-		and vf > car.def.max_speed * 0.55 \
-		and car.nitro_ratio() > NITRO_MIN_RATIO
+		and vf > bike.def.max_speed * 0.55 \
+		and bike.nitro_ratio() > NITRO_MIN_RATIO

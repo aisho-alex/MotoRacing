@@ -1,6 +1,6 @@
 extends SceneTree
 ## Dev tool: splits rim geometry out of the baked body mesh into each corner
-## wheel node, so car.gd's runtime wheel rotation spins the whole wheel.
+## wheel node, so race_bike.gd's runtime wheel rotation spins the whole wheel.
 ## Only needed for models whose rims are baked into the body (DanielZ series).
 ## Run: GLB=path OUT=path godot -s tools/split_rims.gd
 

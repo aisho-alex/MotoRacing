@@ -1,0 +1,7 @@
+asset: assets/bikes/scrambler_01/body.glb
+model: DIRT BIKE OFF ROAD BIKE LOW POLY
+author: nabeelashrafphotography (https://sketchfab.com/nabeelashrafphotography)
+source: https://sketchfab.com/3d-models/dbcca404b21348c69938207d265b6035
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/centered pivot, wheel-node rename, PBR fixes, scaled to bike length (tools/assetgen/process_bike.py)
+date: 2026-09-30

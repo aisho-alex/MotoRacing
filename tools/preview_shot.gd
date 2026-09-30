@@ -17,12 +17,12 @@ func _process(_delta: float) -> bool:
 		_start_ms = Time.get_ticks_msec()
 	if OS.get_environment("ANIMATE_TRACK") == "1":
 		var track = root.find_child("Track", true, false)
-		var car = root.find_child("Car", true, false)
-		if track != null and car != null:
+		var bike = root.find_child("Bike", true, false)
+		if track != null and bike != null:
 			var idx: int = (_start_index + int(float(_frames) * 0.28)) % int(track.sample_count())
-			car.global_position = track.centerline[idx] + Vector3.UP * 0.6
-			car.rotation = Vector3(0.0, track.tangent_yaw(idx), 0.0)
-			car.velocity = -car.global_transform.basis.z * 24.0
+			bike.global_position = track.centerline[idx] + Vector3.UP * 0.6
+			bike.rotation = Vector3(0.0, track.tangent_yaw(idx), 0.0)
+			bike.velocity = -bike.global_transform.basis.z * 24.0
 	var target_ms := 700 if OS.get_environment("SHOT") == "menu" else 5600
 	if OS.get_environment("WAIT_MS") != "":
 		target_ms = int(OS.get_environment("WAIT_MS"))
@@ -30,19 +30,19 @@ func _process(_delta: float) -> bool:
 		var img := root.get_texture().get_image()
 		img.save_png("/tmp/opencode/preview_shot.png")
 		if OS.get_environment("STATS") == "1":
-			var car = root.find_child("Car", true, false)
+			var bike = root.find_child("Bike", true, false)
 			var track = root.find_child("Track", true, false)
-			var distance = car.road_distance_fn.call(car.global_position) if car != null and car.road_distance_fn.is_valid() else -1.0
+			var distance = bike.road_distance_fn.call(bike.global_position) if bike != null and bike.road_distance_fn.is_valid() else -1.0
 			var nearest := 0
 			var best := INF
-			if car != null and track != null:
+			if bike != null and track != null:
 				for i in track.sample_count():
-					var candidate: float = track.centerline[i].distance_squared_to(car.global_position)
+					var candidate: float = track.centerline[i].distance_squared_to(bike.global_position)
 					if candidate < best:
 						best = candidate
 						nearest = i
-			var facing = (-car.global_transform.basis.z).dot(track.tangents[nearest]) if car != null and track != null else 0.0
-			var height = car.global_position.y - track.centerline[nearest].y if car != null and track != null else 0.0
+			var facing = (-bike.global_transform.basis.z).dot(track.tangents[nearest]) if bike != null and track != null else 0.0
+			var height = bike.global_position.y - track.centerline[nearest].y if bike != null and track != null else 0.0
 			if OS.get_environment("NEAR_MESHES") == "1":
 				var cam := root.get_camera_3d()
 				var buildings := root.find_child("Buildings", true, false)
@@ -78,8 +78,8 @@ func _process(_delta: float) -> bool:
 					" objects=", Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
 					" primitives=", Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
 					" fps=", Performance.get_monitor(Performance.TIME_FPS),
-					" speed=", car.velocity.length() if car != null else 0.0,
-					" nitro=", car.is_nitro_active() if car != null else false,
+					" speed=", bike.velocity.length() if bike != null else 0.0,
+					" nitro=", bike.is_nitro_active() if bike != null else false,
 					" road_distance=", distance,
 					" nearest=", nearest,
 					" facing=", facing,
@@ -99,29 +99,31 @@ func _setup() -> void:
 		var game := root.get_node_or_null("/root/Game")
 		if game != null and OS.get_environment("TRACK") != "":
 			game.track_index = int(OS.get_environment("TRACK"))
+		if game != null and OS.get_environment("BIKE") != "":
+			game.bike_index = int(OS.get_environment("BIKE"))
 	var main := (load(scene_path) as PackedScene).instantiate()
 	root.add_child(main)
 	var start_index := OS.get_environment("START_INDEX")
 	if start_index != "":
 		var track = main.get("track")
-		var car = main.get("car")
+		var bike = main.get("bike")
 		var idx := clampi(int(start_index), 0, int(track.sample_count() - 1))
 		_start_index = idx
-		car.reset_to(track.centerline[idx], track.tangent_yaw(idx))
-		main.get("cam").snap_behind(car)
+		bike.reset_to(track.centerline[idx], track.tangent_yaw(idx))
+		main.get("cam").snap_behind(bike)
 	if OS.get_environment("AUTO_DRIVE") == "1":
-		var car = main.get("car")
+		var bike = main.get("bike")
 		var track = main.get("track")
 		var driver = load("res://scripts/ai_driver.gd").new(track, 1.0, 0.0)
-		driver.resync(car)
-		car.driver = driver
-		car.control_enabled = true
+		driver.resync(bike)
+		bike.driver = driver
+		bike.control_enabled = true
 	if OS.get_environment("HIDE_WORLD") == "1":
 		var track := main.get_node_or_null("Track")
 		if track != null:
 			track.visible = false
 		for node in main.get_children():
-			if node.name == "Car" or node.name.begins_with("AI"):
+			if node.name == "Bike" or node.name.begins_with("AI"):
 				node.visible = false
 	elif OS.get_environment("HIDE_BUILDINGS") == "1":
 		var buildings := main.find_child("Buildings", true, false)
@@ -158,12 +160,12 @@ func _setup() -> void:
 		if speed_vfx != null:
 			speed_vfx.visible = false
 	elif OS.get_environment("HIDE_HEADLIGHTS") == "1":
-		var player_car := main.get_node_or_null("Car")
-		if player_car != null:
-			for light in player_car.find_children("*", "SpotLight3D", true, false):
+		var player_bike := main.get_node_or_null("Bike")
+		if player_bike != null:
+			for light in player_bike.find_children("*", "SpotLight3D", true, false):
 				light.visible = false
-	elif OS.get_environment("HIDE_CAR_VFX") == "1":
-		var player_car := main.get_node_or_null("Car")
-		if player_car != null:
-			for particles in player_car.find_children("*", "GPUParticles3D", true, false):
+	elif OS.get_environment("HIDE_BIKE_VFX") == "1":
+		var player_bike := main.get_node_or_null("Bike")
+		if player_bike != null:
+			for particles in player_bike.find_children("*", "GPUParticles3D", true, false):
 				particles.visible = false

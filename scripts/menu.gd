@@ -1,8 +1,8 @@
 extends Control
-## Main menu: car and track pickers plus start/quit. Keyboard (arrows, Enter,
+## Main menu: bike and track pickers plus start/quit. Keyboard (arrows, Enter,
 ## Esc) and mouse both work.
 
-var _car_label: Label
+var _bike_label: Label
 var _track_label: Label
 var _tier_label: Label
 var _hint_label: Label
@@ -10,9 +10,15 @@ var _bank_label: Label
 var _credits_panel: PanelContainer
 
 
-const CREDITS_TEXT := """[b]CARS — Sketchfab, CC-BY 4.0[/b]
-Ferrari 458 Italia — JUSTGAME
-Asti Stradale '89 · Phoenix 455 '71 · Milano '95
+const CREDITS_TEXT := """[b]MOTORCYCLES & RIDERS — Sketchfab, CC-BY 4.0[/b]
+DIRT BIKE OFF ROAD BIKE LOW POLY — nabeelashrafphotography
+Honda CB 750 F Super Sport 1970 — Alex.Ka.
+Motorcycle Fallout — milinam2002
+HCR2 Superbike — oakar258
+Low Poly Motorcycle 001 — roh3d
+Rider: procedural low-poly (built in-engine)
+
+[b]TRAFFIC CARS — Sketchfab, CC-BY 4.0[/b]
 Shvan '92 · Illinois '90 Taxi · Fairheaven SW '84 — DanielZhabotinsk
 BMW E46 1998 · BMW E30 1985 — roh3d
 
@@ -53,10 +59,10 @@ func _build_ui() -> void:
 
 	box.add_child(_spacer(10))
 
-	_car_label = _label("", 36, Color.WHITE)
+	_bike_label = _label("", 36, Color.WHITE)
 	_track_label = _label("", 36, Color.WHITE)
 	_tier_label = _label("", 36, Color.WHITE)
-	box.add_child(_picker_row("CAR", _car_label, _on_car_prev, _on_car_next))
+	box.add_child(_picker_row("BIKE", _bike_label, _on_bike_prev, _on_bike_next))
 	box.add_child(_picker_row("TRACK", _track_label, _on_track_prev, _on_track_next))
 	box.add_child(_picker_row("LEVEL", _tier_label, _on_tier_prev, _on_tier_next))
 	_hint_label = _label("", 22, Color(1, 1, 1, 0.45))
@@ -86,13 +92,13 @@ func _build_ui() -> void:
 	_refresh()
 
 
-func _on_car_prev() -> void:
-	Game.cycle_car(-1)
+func _on_bike_prev() -> void:
+	Game.cycle_bike(-1)
 	_refresh()
 
 
-func _on_car_next() -> void:
-	Game.cycle_car(1)
+func _on_bike_next() -> void:
+	Game.cycle_bike(1)
 	_refresh()
 
 
@@ -161,7 +167,7 @@ func _toggle_credits() -> void:
 
 
 func _refresh() -> void:
-	_car_label.text = Game.car_name()
+	_bike_label.text = Game.bike_name()
 	_track_label.text = Game.track_name()
 	_tier_label.text = Game.tier_label()
 	_hint_label.text = _first_lock_hint()
@@ -171,8 +177,8 @@ func _refresh() -> void:
 func _first_lock_hint() -> String:
 	if Game.unlocked_tracks < Game.TRACK_IDS.size():
 		return Game.track_lock_hint(Game.unlocked_tracks)
-	for id in Game.CAR_IDS:
-		if not Game.is_car_unlocked(id):
+	for id in Game.BIKE_IDS:
+		if not Game.is_bike_unlocked(id):
 			return Game.lock_hint(id)
 	return ""
 
@@ -205,10 +211,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_cancel"):
 		get_tree().quit()
 	elif event.is_action_pressed("ui_left"):
-		Game.cycle_car(-1)
+		Game.cycle_bike(-1)
 		_refresh()
 	elif event.is_action_pressed("ui_right"):
-		Game.cycle_car(1)
+		Game.cycle_bike(1)
 		_refresh()
 	elif event.is_action_pressed("ui_up"):
 		Game.cycle_track(-1)

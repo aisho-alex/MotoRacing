@@ -4,11 +4,14 @@ extends CanvasLayer
 
 var _lap_label: Label
 var _pos_label: Label
+var _police_label: Label
 var _time_label: Label
 var _best_label: Label
 var _last_label: Label
 var _speed_label: Label
 var _nitro_gauge: NitroGauge
+var _health_bar: ProgressBar
+var _health_fill: StyleBoxFlat
 var _center_big: Label
 var _center_sub: Label
 
@@ -45,6 +48,10 @@ func _ready() -> void:
 	_pos_label = _make_label("POS 1/4", 24)
 	_pos_label.label_settings.font_color = Color(0.65, 0.9, 1.0)
 	stats.add_child(_pos_label)
+	_police_label = _make_label("POLICE!", 26)
+	_police_label.label_settings.font_color = Color(1.0, 0.25, 0.2)
+	_police_label.visible = false
+	stats.add_child(_police_label)
 	_time_label = _make_label("TIME 0:00.00", 22)
 	stats.add_child(_time_label)
 	_best_label = _make_label("BEST --:--.--", 22)
@@ -56,6 +63,24 @@ func _ready() -> void:
 
 	var speed_box := VBoxContainer.new()
 	add_child(speed_box)
+	var health_caption := _make_label("HEALTH", 22)
+	health_caption.label_settings.font_color = Color(1.0, 0.45, 0.42)
+	speed_box.add_child(health_caption)
+	_health_bar = ProgressBar.new()
+	_health_bar.min_value = 0.0
+	_health_bar.max_value = 1.0
+	_health_bar.value = 1.0
+	_health_bar.show_percentage = false
+	_health_bar.custom_minimum_size = Vector2(320, 18)
+	var hb_bg := StyleBoxFlat.new()
+	hb_bg.bg_color = Color(1, 1, 1, 0.10)
+	hb_bg.set_corner_radius_all(4)
+	_health_bar.add_theme_stylebox_override("background", hb_bg)
+	_health_fill = StyleBoxFlat.new()
+	_health_fill.bg_color = Color(0.35, 0.82, 0.42)
+	_health_fill.set_corner_radius_all(4)
+	_health_bar.add_theme_stylebox_override("fill", _health_fill)
+	speed_box.add_child(_health_bar)
 	var nitro_caption := _make_label("NITRO", 26)
 	nitro_caption.label_settings.font_color = Color(1.0, 0.78, 0.28)
 	speed_box.add_child(nitro_caption)
@@ -69,7 +94,7 @@ func _ready() -> void:
 	speed_box.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT,
 			Control.PRESET_MODE_MINSIZE, 16)
 
-	var hint := _make_label("SHIFT — NITRO    R — RESTART", 18)
+	var hint := _make_label("SHIFT — NITRO   Q/E — PUNCH   F — KICK   R — RESTART", 18)
 	hint.label_settings.font_color = Color(1, 1, 1, 0.6)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(hint)
@@ -96,6 +121,11 @@ func set_position(pos: int, total: int) -> void:
 	_pos_label.text = "POS %d/%d" % [pos, total]
 
 
+func set_police(active: bool) -> void:
+	if _police_label != null:
+		_police_label.visible = active
+
+
 func update_race_info(cur: float, best: float, last: float) -> void:
 	_time_label.text = "TIME %s" % fmt(cur)
 	_best_label.text = "BEST %s" % fmt(best)
@@ -108,6 +138,27 @@ func set_speed(kmh: float) -> void:
 
 func set_nitro(ratio: float, active: bool) -> void:
 	_nitro_gauge.set_state(ratio, active)
+
+
+func set_health(ratio: float) -> void:
+	if _health_bar == null:
+		return
+	var r := clampf(ratio, 0.0, 1.0)
+	_health_bar.value = r
+	if _health_fill != null:
+		if r > 0.5:
+			_health_fill.bg_color = Color(0.35, 0.82, 0.42)
+		elif r > 0.25:
+			_health_fill.bg_color = Color(0.95, 0.78, 0.25)
+		else:
+			_health_fill.bg_color = Color(0.92, 0.25, 0.22)
+
+
+## Big centered banner (wipeout / busted warnings).
+func show_message(text: String, color := Color.WHITE, sub := "") -> void:
+	_center_big.label_settings.font_color = color
+	_center_big.text = text
+	_center_sub.text = sub
 
 
 func show_countdown(number: int) -> void:
@@ -145,6 +196,8 @@ func reset_race() -> void:
 	update_race_info(0.0, -1.0, -1.0)
 	set_speed(0.0)
 	set_nitro(1.0, false)
+	set_health(1.0)
+	set_police(false)
 	clear_center()
 
 

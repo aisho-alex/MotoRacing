@@ -18,6 +18,38 @@
 /media/alexander/data/Godot_v4.7.2-stable_linux.x86_64 --headless --path . -s tools/check_buildings.gd
 ```
 
+## Мотоциклы (Road Rash)
+
+- Гоночный транспорт — **реальные GLB-модели** (Sketchfab CC-BY) в
+  `assets/bikes/<id>/body.glb` + процедурный сидящий райдер:
+  `scripts/bike_visuals.gd` (рама/колёса — фолбэк), `scripts/rider.gd`
+  (перс), данные — `BikeDef` в `assets/data/bikes/*.tres`
+  (`model_path`, `model_yaw`, `rider_mount`). Пайплайн моделей —
+  `tools/assetgen/process_bike.py` (+ `normalize_bike.py`).
+- Ростер: `scrambler_01`, `sport_01`, `cruiser_01`, `super_01`, коп `cop_01`.
+  Наклон/вилли — узел `Tilt` (bike-space), `BikeDef.lean_max`. Колёса
+  крутятся, если у GLB есть ноды `wheel`/`tyre` (иначе статичны).
+- Бой (Road Rash): Q/E — удар влево/вправо, F — пинок; здоровье в HUD,
+  нокдаун → вайпаут (байк падает, райдер кувыркается) → возврат через 3 с.
+  Логика в `scripts/race_bike.gd` (+ `rider.gd`), AI-агрессия — `AiDriver.decide_attack`.
+- Урон: удары, а также столкновения (в машину — 10–40 по скорости, в стену —
+  6–25; impact считается по скорости ДО `move_and_slide`, иначе dot≈0).
+  ИИ-соперничество: резинка ±10% (`main.gd`), обгон на скорости
+  (`AiDriver._blocker_much_slower`), мщение атакующему 4 с (`grudge`).
+- Полиция (`scripts/police.gd`): коп появляется с задержкой (`POLICE_DELAY` env
+  для теста) и преследует игрока; при скорости <6 м/с рядом с копом 2.5 с —
+  BUSTED. Сбитый коп даёт бонус. Трафик (`scripts/traffic.gd`): 5 GLB-машин из
+  `assets/data/traffic/` едут по полосам; быстрый удар = вайпаут.
+  У каждой машины `model_yaw` в `assets/data/traffic/*.tres` должен разворачивать
+  нос модели в −Z (иначе машина «едет боком»): проверка
+  `tools/check_traffic_orient.gd` (PASS/FAIL), рендер-контроль —
+  `tools/car_orient_shot.gd` (через `xvfb-run`, `CAR_ID=<id>` для одной модели).
+- Проверки баланса/магазина/кампании/боя (должны быть PASS):
+  `tools/check_tuning.gd`, `tools/check_shop.gd`, `tools/check_campaign.gd`,
+  `tools/check_combat.gd`.
+- Скриншот байка крупным планом: `tools/bike_close_shot.gd` (через `xvfb-run`;
+  POSE=punch|kick|crash для боевых поз).
+
 ## Трассы
 
 - Геометрия трассы задаётся только `control_points` в `assets/data/tracks/*.tres`

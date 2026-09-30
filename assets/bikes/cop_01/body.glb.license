@@ -1,0 +1,7 @@
+asset: assets/bikes/cop_01/body.glb
+model: Low Poly Motorcycle 001
+author: roh3d (https://sketchfab.com/roh3d)
+source: https://sketchfab.com/3d-models/38a3b1f8cdb24a049d2430520eb9882a
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/centered pivot, wheel-node rename, PBR fixes, scaled to bike length (tools/assetgen/process_bike.py)
+date: 2026-09-30

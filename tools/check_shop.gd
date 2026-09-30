@@ -5,7 +5,7 @@ extends SceneTree
 ## Run: godot --headless --path . -s tools/check_shop.gd
 
 const SAVE := "user://progress.cfg"
-const CAR := "compact_01"
+const BIKE := "scrambler_01"
 
 var _deferred := true
 
@@ -42,15 +42,15 @@ func _process(_delta: float) -> bool:
 
 func _check_unlock_gate(gs: Node) -> int:
 	var failures := 0
-	if gs.is_car_unlocked("sport_01"):
+	if gs.is_bike_unlocked("sport_01"):
 		print("sport should be locked before any race")
 		failures += 1
 	gs.credits = 99999
 	if gs.buy_upgrade("sport_01", "engine"):
-		print("locked car must not be upgradable")
+		print("locked bike must not be upgradable")
 		failures += 1
 	if gs.upgrade_level("sport_01", "engine") != 0:
-		print("locked car level changed")
+		print("locked bike level changed")
 		failures += 1
 	return failures
 
@@ -59,13 +59,13 @@ func _check_reward(gs: Node) -> int:
 	var failures := 0
 	gs.credits = 0
 	var earned: int = gs.record_result(true, 1)
-	if earned != CarTuning.reward_for(1):
+	if earned != BikeTuning.reward_for(1):
 		print("reward mismatch: got %d" % earned)
 		failures += 1
 	if gs.credits != earned:
 		print("credits not credited: %d" % gs.credits)
 		failures += 1
-	if not gs.is_car_unlocked("hyper_01"):
+	if not gs.is_bike_unlocked("super_01"):
 		print("win should unlock hyper")
 		failures += 1
 	return failures
@@ -73,19 +73,19 @@ func _check_reward(gs: Node) -> int:
 
 func _check_affordability(gs: Node) -> int:
 	var failures := 0
-	var price: int = gs.upgrade_cost(CAR, "engine")
-	if price != CarTuning.cost(CAR, 0):
+	var price: int = gs.upgrade_cost(BIKE, "engine")
+	if price != BikeTuning.cost(BIKE, 0):
 		print("cost mismatch: %d" % price)
 		failures += 1
 	gs.credits = price - 1
-	if gs.can_afford_upgrade(CAR, "engine"):
+	if gs.can_afford_upgrade(BIKE, "engine"):
 		print("should not afford with one credit short")
 		failures += 1
-	if gs.buy_upgrade(CAR, "engine"):
+	if gs.buy_upgrade(BIKE, "engine"):
 		print("buy must fail when credits are short")
 		failures += 1
 	gs.credits = price
-	if not gs.can_afford_upgrade(CAR, "engine"):
+	if not gs.can_afford_upgrade(BIKE, "engine"):
 		print("should afford with exact credits")
 		failures += 1
 	return failures
@@ -94,23 +94,23 @@ func _check_affordability(gs: Node) -> int:
 func _check_buy_and_tuned(gs: Node) -> int:
 	var failures := 0
 	gs.credits = 100000
-	var base_speed: float = gs.car_def_by_id(CAR).max_speed
-	var price: int = gs.upgrade_cost(CAR, "engine")
+	var base_speed: float = gs.bike_def_by_id(BIKE).max_speed
+	var price: int = gs.upgrade_cost(BIKE, "engine")
 	var before: int = gs.credits
-	if not gs.buy_upgrade(CAR, "engine"):
+	if not gs.buy_upgrade(BIKE, "engine"):
 		print("valid buy failed")
 		failures += 1
 	if gs.credits != before - price:
 		print("credits not deducted: %d -> %d" % [before, gs.credits])
 		failures += 1
-	if gs.upgrade_level(CAR, "engine") != 1:
+	if gs.upgrade_level(BIKE, "engine") != 1:
 		print("level not incremented")
 		failures += 1
-	var tuned_speed: float = gs.tuned_def_for(CAR).max_speed
+	var tuned_speed: float = gs.tuned_def_for(BIKE).max_speed
 	if tuned_speed <= base_speed:
 		print("tuned def did not grow: %.2f -> %.2f" % [base_speed, tuned_speed])
 		failures += 1
-	if not is_equal_approx(gs.car_def_by_id(CAR).max_speed, base_speed):
+	if not is_equal_approx(gs.bike_def_by_id(BIKE).max_speed, base_speed):
 		print("base def mutated")
 		failures += 1
 	return failures
@@ -119,15 +119,15 @@ func _check_buy_and_tuned(gs: Node) -> int:
 func _check_max(gs: Node) -> int:
 	var failures := 0
 	gs.credits = 1000000
-	while gs.upgrade_level(CAR, "tires") < CarTuning.MAX_LEVEL:
-		if not gs.buy_upgrade(CAR, "tires"):
+	while gs.upgrade_level(BIKE, "tires") < BikeTuning.MAX_LEVEL:
+		if not gs.buy_upgrade(BIKE, "tires"):
 			print("buy to max failed")
 			failures += 1
 			break
-	if gs.upgrade_cost(CAR, "tires") != -1:
+	if gs.upgrade_cost(BIKE, "tires") != -1:
 		print("maxed cost should be -1")
 		failures += 1
-	if gs.buy_upgrade(CAR, "tires"):
+	if gs.buy_upgrade(BIKE, "tires"):
 		print("buy past max must fail")
 		failures += 1
 	return failures

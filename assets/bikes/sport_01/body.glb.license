@@ -1,0 +1,7 @@
+asset: assets/bikes/sport_01/body.glb
+model: Honda CB 750 F Super Sport 1970
+author: Alex.Ka. (https://sketchfab.com/Alex.Ka.)
+source: https://sketchfab.com/3d-models/f121301624174b179ca4d50158797b03
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/centered pivot, wheel-node rename, PBR fixes, scaled to bike length (tools/assetgen/process_bike.py)
+date: 2026-09-30

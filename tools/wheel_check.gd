@@ -1,8 +1,8 @@
 extends SceneTree
-## Dev tool: verifies car.gd wheel math offline. Loads a car body.glb, applies
-## the same spin/steer transform as RaceCar._update_wheels with configurable
-## angles, and screenshots a closeup of the front-left wheel.
-## GLB=res://assets/cars/sport_01/body.glb SPIN=120 STEER=25 OUT=/tmp/x.png
+## Dev tool: verifies RaceBike wheel math offline. Loads a vehicle body.glb,
+## applies the same spin/steer transform as RaceBike._update_wheels with
+## configurable angles, and screenshots a closeup of the front-left wheel.
+## GLB=res://assets/cars/traffic_sedan/body.glb SPIN=120 STEER=25 OUT=/tmp/x.png
 
 func _process(_delta: float) -> bool:
 	_run()
@@ -12,7 +12,7 @@ func _process(_delta: float) -> bool:
 func _run() -> void:
 	var path := OS.get_environment("GLB")
 	if path.is_empty():
-		path = "res://assets/cars/sport_01/body.glb"
+		path = "res://assets/cars/traffic_sedan/body.glb"
 	var spin := deg_to_rad(float(OS.get_environment("SPIN")) if OS.get_environment("SPIN") != "" else 0.0)
 	var steer := deg_to_rad(float(OS.get_environment("STEER")) if OS.get_environment("STEER") != "" else 0.0)
 	var out := OS.get_environment("OUT")
@@ -28,13 +28,13 @@ func _run() -> void:
 		return
 	var model := doc.generate_scene(state)
 	var holder := Node3D.new()
-	# same convention as RaceCar: model_yaw aligns model forward with -Z
+	# same convention as RaceBike: model_yaw aligns model forward with -Z
 	var yaw := float(OS.get_environment("YAW")) if OS.get_environment("YAW") != "" else PI
 	holder.rotation.y = yaw
 	holder.add_child(model)
 	root.add_child(holder)
 
-	# find corner wheels like car.gd does
+	# find corner wheels like race_bike.gd does
 	var wheels: Array[Node3D] = []
 	var fronts: Array[Node3D] = []
 	var stack: Array[Node] = [model]
@@ -61,9 +61,9 @@ func _run() -> void:
 					break
 			if not under:
 				(mi as MeshInstance3D).visible = false
-	# same scheme as RaceCar._update_wheels: rebuild each wheel into a clean
-	# hub frame (car orientation + hub translation), compensate children,
-	# then apply spin/steer as pure rotations around car right/up axes
+	# same scheme as RaceBike._update_wheels: rebuild each wheel into a clean
+	# hub frame (vehicle orientation + hub translation), compensate children,
+	# then apply spin/steer as pure rotations around vehicle right/up axes
 	var hinv := holder.global_transform.affine_inverse()
 	var hubs: Array[Vector3] = []
 	for w in wheels:

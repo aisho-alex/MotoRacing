@@ -29,58 +29,67 @@
 | Музыка | OGG, стерео, 60–120 с луп |
 | Бюджет ассетов в сборке | ≤ 120 МБ |
 
-## 3. Автомобили (6+3 шт: 4 игрока + 5 трафик)
+## 3. Транспорт: мотоциклы (игрок + AI) и трафик-автомобили
 
-Текущий источник: **Sketchfab, CC-BY 4.0** ( mid-poly PBR, интерьеры,
-раздельные колёса). Атрибуция — экран CREDITS в меню + `body.glb.license`.
+Гоночные мотоциклы — **реальные GLB-модели** со **Sketchfab, CC-BY 4.0**
+(`assets/bikes/<id>/body.glb` + внешние текстуры + `.license`). Сверху
+монтируется **процедурный райдер** (`scripts/rider.gd`) — он сохраняет
+перекраску по цвету соперника и рабочие позы удара/пинка/кувырка; посадка
+задаётся `BikeDef.rider_mount`/`rider_scale`. Ростер: `scrambler_01`,
+`sport_01`, `cruiser_01`, `super_01` + `cop_01` (`assets/data/bikes/*.tres`).
+
+| id | модель | автор | трис |
+|---|---|---|---|
+| scrambler_01 | DIRT BIKE OFF ROAD BIKE LOW POLY | nabeelashrafphotography | ~17k |
+| sport_01 | Honda CB 750 F Super Sport 1970 | Alex.Ka. | ~37k |
+| cruiser_01 | Motorcycle Fallout | milinam2002 | ~20k |
+| super_01 | HCR2 Superbike | oakar258 | ~30k |
+| cop_01 | Low Poly Motorcycle 001 | roh3d | ~5.5k |
+
+`BikeDef.model_path` включает GLB-ветку (иначе — процедурный фолбэк
+`scripts/bike_visuals.gd`, если модель недоступна). Наклон в поворот и вилли
+на нитро применяются к узлу `Tilt` (bike-space), поэтому работают и для GLB
+независимо от `model_yaw`.
+
+Колёса: `race_bike.gd._collect_wheels` собирает ноды с `wheel` в имени (кроме
+`steer`/`handle`) — у модели super_01 (HCR2) есть `wheel_front`/`wheel_rear`,
+они крутятся и переднее рулится. У моделей с запечёнными колёсами (`dirt`,
+`honda`, `fallout`, `roh3d`) нод нет — колёса статичны (спин невидим, но
+байк стоит на земле). `_update_wheels` ставит
+`vehicle_global * tilt * T(hub_rel) * R(up, steer) * R(right, spin)`.
+
+Пайплайн мотоциклов: `sf_search.py`/`sf_download.py` (токен в
+`/tmp/opencode/sketchfab_token`, в репо не хранится) → `process_bike.py`
+(gltf-transform dedupe+resize ≤1024² → `normalize_bike.py`: земля y=0, центр по
+bounds, переименование колёс в `wheel_front`/`wheel_rear`, PBR-фиксы, масштаб
+до длины байка) → `externalize_textures.py` (текстуры наружу). Ориентация
+подбирается `model_yaw` из отчёта `normalize_bike.py` (forward=…). Проверка:
+`tools/bike_close_shot.gd` (BIKE=0..3, NODE=Police, POSE=punch|kick|crash).
+
+### Трафик (5 автомобилей)
+
+Источник: **Sketchfab, CC-BY 4.0**. Атрибуция — экран CREDITS в меню +
+`body.glb.license`. Модели лежат в `assets/cars/traffic_*/body.glb`, def-ы — в
+`assets/data/traffic/traffic_*.tres` (класс `BikeDef`, используется `model_path`
+и габариты; спавн — `scripts/traffic.gd`).
 
 | id | модель | автор |
 |---|---|---|
-| hyper_01 | Ferrari 458 Italia | JUSTGAME |
-| sport_01 | Asti Stradale '89 (Lancia Delta HF) | DanielZhabotinsk |
-| muscle_01 | Phoenix 455 '71 | DanielZhabotinsk |
-| compact_01 | Milano '95 | DanielZhabotinsk |
 | traffic_sedan | BMW E46 1998 | roh3d |
 | traffic_van | Shvan '92 (VW T4) | DanielZhabotinsk |
 | traffic_taxi | Illinois '90 Taxi | DanielZhabotinsk |
 | traffic_wagon1 | BMW E30 1985 | roh3d |
 | traffic_wagon2 | Fairheaven SW '84 | DanielZhabotinsk |
 
-Пайплайн: `sf_search.py`/`sf_download.py` (токен в `/tmp/opencode/sketchfab_token`,
-в репо не хранится) → `process_car.py` (gltf-transform dedupe+resize ≤1024²,
-герои) / ≤512² (трафик) → `normalize_car.py` (земля y=0, пивот в центре
-колёсной базы, угловые колёса `_FL/_FR/_RL/_RR` остаются матчевыми для
-`car.gd`, `Steering_Wheel` и прочие «wheel»-ноды переименовываются, PBR-фиксы
-материалов: шины metal 0, body rough 0.32) → `externalize_textures.py`
-(текстуры наружу файлами — иначе Godot при импорте извлекает их рядом с GLB и
-дублирует в билде).
-
-Ориентация: серии DanielZhabotinsk и Ferrari — вперёд +X (`model_yaw = PI/2`),
-roh3d (E46/E30) — вперёд +Z (`model_yaw = PI`).
-Колёса: `car.gd._collect_wheels` при сборке переводит каждую 4-угловую
-wheel-ноду в «чистую ступицу» — трансформ = ориентация машины + позиция
-ступицы в car-space (мета `hub_rel`), а дети (шина, обод, тормозной диск)
-компенсируются так, что визуал не меняется. `_update_wheels` каждый кадр
-ставит `car_global * T(hub_rel) * R(up, steer) * R(right, spin)` — чистые
-повороты без наследования shear/зеркал/масштабов из иерархии модели. Отсюда
-единственное требование к модели — origin wheel-ноды в центре ступицы;
-внутренние ориентации/масштабы любые. Угловые ноды матчатся по суффиксу
-`_fl/_fr/_rl/_rr/_bl/_br` при «wheel»/«wheelstock»/«hubcap» в имени
-(`normalize_car.py`), «Steering Wheel» и служебные под-меши переименовываются,
-чтобы не попасть в список.
-
-Обода (в части моделей DanielZhabotinsk запечены в меш кузова — крутилась
-только шина): `tools/split_rims.gd` вырезает геометрию диска из кузовного
-меша в отдельный child-меш под каждой угловой нодой (классификация
-треугольников по радиусу/вылету у оси ступицы; суппорты/тормоза исключаются).
-Проверка: `tools/wheel_check.gd` (GLB/SPIN/STEER/YAW/NOBODY env) и
-`tools/car_close_shot.gd` (крупный план в игре).
-
-Реальные габариты в метрах, `model_scale = 1.0`; коллизии/wheel_radius — в `.tres`.
-
-Трафик-Def-ы (`traffic_*.tres`) лежат в `assets/data/cars/` и готовы к спавну,
-в геймплей пока не включены. Ливреи: `livery_count = 0` (фирменные текстуры
-авторов), UV есть — перекраски отдельной задачей.
+Пайплайн GLB-моделей (трафик/будущие): `sf_search.py`/`sf_download.py` (токен в
+`/tmp/opencode/sketchfab_token`, в репо не хранится) → `process_car.py`
+(gltf-transform dedupe+resize ≤512²) → `normalize_car.py` (земля y=0, пивот в
+центре колёсной базы, угловые колёса `_fl/_fr/_rl/_rr`) →
+`externalize_textures.py` (текстуры наружу файлами). Ориентация: серии
+DanielZhabotinsk/Ferrari — вперёд +X (`model_yaw = PI/2`), roh3d — +Z
+(`model_yaw = PI`). Проверка колёс: `tools/wheel_check.gd`
+(GLB/SPIN/STEER/YAW/NOBODY env) и `tools/bike_close_shot.gd` (крупный план в
+игре).
 
 ## 4. Окружение (биомы: city, desert, alpine, coast)
 
@@ -125,13 +134,13 @@ wheel-ноду в «чистую ступицу» — трансформ = ор�
 ## 8. Данные и интеграция
 
 - `TrackDef` (tres): контрольные точки сплайна, ширина, биом, точки рамп/пропсов. Вынесен из `track_builder.gd`; лежит в `assets/data/tracks/` (city_01, desert_01).
-- `CarDef` (tres): путь к GLB, статы, ливреи, класс звука двигателя. Лежит в `assets/data/cars/` (sport/compact/muscle/hyper; поле `livery_index` выбирает ливрею из общей папки).
-- `car.gd` читает CarDef вместо констант; колёса из модели (узлы с `wheel` в имени) крутятся, передние — рулятся; `driver: AiDriver` переключает ввод на AI.
+- `BikeDef` (tres): силуэт/палитра процедурного байка, габариты, статы, класс звука двигателя (и опциональный `model_path` GLB). Лежит в `assets/data/bikes/` (scrambler_01/sport_01/cruiser_01/super_01). Трафик — в `assets/data/traffic/`.
+- `race_bike.gd` читает BikeDef; строит байк через `bike_visuals.gd` (+ `rider.gd`), колёса (`wheel_front`/`wheel_rear`) крутятся, переднее — рулится, есть визуальный крен в поворот; `driver: AiDriver` переключает ввод на AI.
 - AI-соперники: `AiDriver` (следование по центральной линии, торможение по кривизне, нитро на прямых, anti-stuck) + `RacerProgress` для живых позиций (HUD «POS x/4»).
 - Аудио-шины: `Master/Music/SFX/Engine` (`default_bus_layout.tres`); автолоад `Audio` проигрывает только существующие файлы (no-op, пока ассетов нет). Музыка: menu, race_city, race_desert (процедурные лупы).
-- HUD: шрифт ChakraPetch; меню (`scenes/menu.tscn`) — выбор машины/трассы, автолоад `Game` передаёт выбор в гонку.
+- HUD: шрифт ChakraPetch; меню (`scenes/menu.tscn`) — выбор мотоцикла/трассы, автолоад `Game` передаёт выбор в гонку.
 - Тач-контролы: `TouchControls` (мультитач-кнопки → Input actions; F4 — переключить на десктопе).
-- Инструменты: `tools/preview_shot.gd` (скриншоты через xvfb; SHOT=menu|race, TRACK, WAIT_MS), `tools/ai_probe.gd` (диагностика AI: TRACK, SOLO=n, TIME_SCALE).
+- Инструменты: `tools/preview_shot.gd` (скриншоты через xvfb; SHOT=menu|race, TRACK, WAIT_MS), `tools/ai_probe.gd` (диагностика AI: TRACK, SOLO=n, TIME_SCALE), `tools/bike_close_shot.gd` (крупный план байка).
 - AI-надёжность: соперники-призраки (не сталкиваются друг с другом), watchdog-респавн при заторе >2.5 с, wall-bias (руль от стены по боковому смещению), wrong-way разворот, личные коридоры ±1.6 м; рампы не ближе 60 сэмплов от старта.
 - Текстуры земли/дорог: photoreal альбедо через SwarmUI (**Z-Image Turbo**, `gen_sdxl_tex.py`, хост `127.0.0.1:7801`): генерация 1536² → detrend (снятие запечённых градиентов) → бесшовность «offset+heal» (wrap-blend краевой полосы с интерьером; FFT-метод с фейдом больше не используется — давал полосы и тёмную кайму) → даунсемпл 1024² + unsharp. Best-of-3 сидов на материал (скор: микродеталь минус шаг шва). Normal считается из 1536²-люминантности, ORM — из финального альбедо. Светлые дороги (desert/coast/canyon/sakura) после генерации тонироваются множителем до целевой яркости (контраст с песком; заметка в `.license`). Процедурные версии лежат в `tools/fallback_textures/` как fallback. Godot importer defaults включают VRAM compression и mipmaps; normal-флаг проставляет `tools/assetgen/patch_imports.py`.
 - Фасады зданий: **все биомы — `facade_{a,b,c,d}.webp` + normal/ORM** (`gen_sdxl_tex.py`, аргумент `<biome>_facades`; движение `_make_facade_materials` читает a–d и молча пропускает отсутствующие). Emission-маски окон (night) — только city (`city_emission`, перегенерировать после замены городских альбедо); ночные альбедо `facade_*_night.webp` выводятся процедурно: `день*0.14 + эмиссия*0.95` (гарантирует совпадение окон); применяются локальным трипланаром (тайл 3 м), на трибунах — тайл 1.5 м; fallback — плоские цвета.
@@ -199,6 +208,23 @@ wheel-ноду в «чистую ступицу» — трансформ = ор�
   остаётся запасным источником трафика). Сырые ассеты ~150 МБ; в сборке
   меньше за счёт VRAM-компрессии — при превышении бюджета жать текстуры
   трафика/зданий до 512².
+- **P4 (Road Rash) — M1–M3 ГОТОВО (2026-09-30):** гоночные автомобили заменены
+  на **процедурные мотоциклы с сидящими райдерами** (`bike_visuals.gd`,
+  `rider.gd`); код и данные переименованы car→bike (`RaceBike`, `BikeDef`,
+  `BikeTuning`, `assets/data/bikes/`). Геройские GLB удалены, 5 трафик-машин
+  сохранены (def-ы в `assets/data/traffic/`). Сейв мигрируется (старый
+  `car_index`/апгрейды `compact_01…` читаются как bike-эквиваленты). Добавлены
+  механики Road Rash: **бой** (Q/E удар, F пинок, здоровье, нокдаун→вайпаут→
+  ремаунт, AI-агрессия; `scripts/race_bike.gd`), **полиция** (`scripts/police.gd`:
+  погоня, BUSTED, бонус за сбитого копа) и **трафик** (`scripts/traffic.gd`:
+  5 GLB-машин по полосам, краш). Проверка боя — `tools/check_combat.gd`.
+- **P5 (2026-09-30):** процедурные байки заменены на **реальные GLB-модели со
+  Sketchfab (CC-BY 4.0)**: 4 класса + коп (`assets/bikes/<id>/body.glb`). Райдер остался
+  процедурным (сохраняет позы боя/вайпаута) и монтируется по
+  `BikeDef.rider_mount`. Пайплайн — `tools/assetgen/process_bike.py`
+  (+ `normalize_bike.py`); у HCR2-супербайка есть отдельные колёса (спин/руль),
+  у остальных колёса запечены. Наклон/вилли вынесены в узел `Tilt` (bike-space),
+  так что работают для GLB с любым `model_yaw`.
 
 ## 10. Критерии приёмки
 

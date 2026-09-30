@@ -1,7 +1,10 @@
 extends Node
-## Autoload "Game": car/track selection, savefile progression and unlocks.
+## Autoload "Game": bike/track selection, savefile progression and unlocks.
 
-const CAR_IDS := ["compact_01", "sport_01", "muscle_01", "hyper_01"]
+const BIKE_IDS := ["scrambler_01", "sport_01", "cruiser_01", "super_01"]
+## Pre-motorcycle car ids, position-for-position with BIKE_IDS; used only to
+## migrate an old savefile's upgrade levels.
+const LEGACY_CAR_IDS := ["compact_01", "sport_01", "muscle_01", "hyper_01"]
 const TRACK_IDS := [
 	"city_01", "desert_01", "alpine_01", "coast_01",
 	"city_02", "desert_02", "alpine_02", "coast_02",
@@ -9,14 +12,14 @@ const TRACK_IDS := [
 ]
 const SAVE_PATH := "user://progress.cfg"
 
-var car_index := 0
+var bike_index := 0
 var track_index := 0
 var track_tier := 0  # 0-based difficulty level on the selected track
 
 var races_done := 0
 var best_pos := 0  # 1 = win; 0 = no finished races yet
 var credits := 0
-var upgrades := {}  # car_id -> {engine, tires, nitro}
+var upgrades := {}  # bike_id -> {engine, tires, nitro}
 var unlocked_tracks := 1  # ladder prefix: tracks [0, unlocked_tracks) are open
 var track_tiers := {}  # track_id -> number of unlocked difficulty tiers (1..3)
 
@@ -25,27 +28,27 @@ func _ready() -> void:
 	_load_progress()
 
 
-## Unlocks: compact is free; sport after finishing any race; muscle after a
-## podium (2nd or better); hyper after winning a race.
-func is_car_unlocked(car_id: String) -> bool:
-	match car_id:
+## Unlocks: Scrambler is free; Sport after finishing any race; Cruiser after a
+## podium (2nd or better); Superbike after winning a race.
+func is_bike_unlocked(bike_id: String) -> bool:
+	match bike_id:
 		"sport_01":
 			return races_done >= 1
-		"muscle_01":
+		"cruiser_01":
 			return best_pos > 0 and best_pos <= 2
-		"hyper_01":
+		"super_01":
 			return best_pos == 1
 	return true
 
 
-func lock_hint(car_id: String) -> String:
-	match car_id:
+func lock_hint(bike_id: String) -> String:
+	match bike_id:
 		"sport_01":
-			return "Sport 01 — finish a race to unlock"
-		"muscle_01":
-			return "Muscle 01 — finish 2nd or better to unlock"
-		"hyper_01":
-			return "Hyper 01 — win a race to unlock"
+			return "Sport 600 — finish a race to unlock"
+		"cruiser_01":
+			return "Cruiser 900 — finish 2nd or better to unlock"
+		"super_01":
+			return "Superbike 1100 — win a race to unlock"
 	return ""
 
 
@@ -58,7 +61,7 @@ func record_result(finished: bool, pos: int) -> int:
 	races_done += 1
 	if best_pos == 0 or pos < best_pos:
 		best_pos = pos
-	var earned := CarTuning.track_reward(pos, track_index, track_tier)
+	var earned := BikeTuning.track_reward(pos, track_index, track_tier)
 	credits += earned
 	if pos > 0 and pos <= 2:
 		_unlock_after_podium()
@@ -66,18 +69,24 @@ func record_result(finished: bool, pos: int) -> int:
 	return earned
 
 
+## Adds credits outside the race reward (e.g. knocking a cop down) and saves.
+func add_credits(amount: int) -> void:
+	credits += maxi(amount, 0)
+	_save_progress()
+
+
 func _unlock_after_podium() -> void:
 	var id: String = TRACK_IDS[track_index]
 	var unlocked := unlocked_tier_count(track_index)
-	track_tiers[id] = mini(maxi(unlocked, track_tier + 2), CarTuning.TRACK_TIERS)
+	track_tiers[id] = mini(maxi(unlocked, track_tier + 2), BikeTuning.TRACK_TIERS)
 	if track_index + 1 >= unlocked_tracks and track_index + 1 < TRACK_IDS.size():
 		unlocked_tracks = track_index + 2
 
 
-func cycle_car(dir: int) -> void:
-	for _attempt in CAR_IDS.size():
-		car_index = wrapi(car_index + dir, 0, CAR_IDS.size())
-		if is_car_unlocked(CAR_IDS[car_index]):
+func cycle_bike(dir: int) -> void:
+	for _attempt in BIKE_IDS.size():
+		bike_index = wrapi(bike_index + dir, 0, BIKE_IDS.size())
+		if is_bike_unlocked(BIKE_IDS[bike_index]):
 			return
 
 
@@ -91,7 +100,7 @@ func is_track_unlocked(index: int) -> bool:
 func unlocked_tier_count(track_index_ref: int) -> int:
 	if track_index_ref < 0 or track_index_ref >= TRACK_IDS.size():
 		return 1
-	return clampi(int(track_tiers.get(TRACK_IDS[track_index_ref], 1)), 1, CarTuning.TRACK_TIERS)
+	return clampi(int(track_tiers.get(TRACK_IDS[track_index_ref], 1)), 1, BikeTuning.TRACK_TIERS)
 
 
 func is_tier_unlocked(track_index_ref: int, tier: int) -> bool:
@@ -108,7 +117,7 @@ func track_lock_hint(index: int) -> String:
 
 func tier_label(tier: int = -1) -> String:
 	var t := track_tier if tier < 0 else tier
-	return "LEVEL %d/%d" % [t + 1, CarTuning.TRACK_TIERS]
+	return "LEVEL %d/%d" % [t + 1, BikeTuning.TRACK_TIERS]
 
 
 func cycle_track(dir: int) -> void:
@@ -125,8 +134,8 @@ func cycle_tier(dir: int) -> void:
 	track_tier = wrapi(track_tier + dir, 0, count)
 
 
-func car_name() -> String:
-	return car_def().display_name
+func bike_name() -> String:
+	return bike_def().display_name
 
 
 func track_name() -> String:
@@ -141,17 +150,17 @@ func track_name_at(index: int) -> String:
 	return id.split("_")[0].capitalize()
 
 
-func car_def() -> CarDef:
-	return car_def_by_id(current_car_id())
+func bike_def() -> BikeDef:
+	return bike_def_by_id(current_bike_id())
 
 
-func car_def_by_id(car_id: String) -> CarDef:
-	var path := "res://assets/data/cars/%s.tres" % car_id
+func bike_def_by_id(bike_id: String) -> BikeDef:
+	var path := "res://assets/data/bikes/%s.tres" % bike_id
 	if ResourceLoader.exists(path):
-		var res := load(path) as CarDef
+		var res := load(path) as BikeDef
 		if res != null:
 			return res
-	return CarDef.new()
+	return BikeDef.new()
 
 
 func track_def() -> TrackDef:
@@ -167,63 +176,63 @@ func track_def_at(index: int) -> TrackDef:
 	return TrackDef.new()
 
 
-func current_car_id() -> String:
-	return CAR_IDS[car_index]
+func current_bike_id() -> String:
+	return BIKE_IDS[bike_index]
 
 
-## Upgrade levels for a car, always a sanitized {engine, tires, nitro} dict.
-func upgrade_levels(car_id: String) -> Dictionary:
-	if not upgrades.has(car_id):
-		upgrades[car_id] = CarTuning.empty_levels()
-	return CarTuning.sanitize(upgrades[car_id])
+## Upgrade levels for a bike, always a sanitized {engine, tires, nitro} dict.
+func upgrade_levels(bike_id: String) -> Dictionary:
+	if not upgrades.has(bike_id):
+		upgrades[bike_id] = BikeTuning.empty_levels()
+	return BikeTuning.sanitize(upgrades[bike_id])
 
 
-func upgrade_level(car_id: String, part: String) -> int:
-	return int(upgrade_levels(car_id).get(part, 0))
+func upgrade_level(bike_id: String, part: String) -> int:
+	return int(upgrade_levels(bike_id).get(part, 0))
 
 
-func upgrade_cost(car_id: String, part: String) -> int:
-	return CarTuning.cost(car_id, upgrade_level(car_id, part))
+func upgrade_cost(bike_id: String, part: String) -> int:
+	return BikeTuning.cost(bike_id, upgrade_level(bike_id, part))
 
 
-func can_afford_upgrade(car_id: String, part: String) -> bool:
-	var price := upgrade_cost(car_id, part)
+func can_afford_upgrade(bike_id: String, part: String) -> bool:
+	var price := upgrade_cost(bike_id, part)
 	return price >= 0 and credits >= price
 
 
-func buy_upgrade(car_id: String, part: String) -> bool:
-	if not is_car_unlocked(car_id):
+func buy_upgrade(bike_id: String, part: String) -> bool:
+	if not is_bike_unlocked(bike_id):
 		return false
-	var price := upgrade_cost(car_id, part)
+	var price := upgrade_cost(bike_id, part)
 	if price < 0 or credits < price:
 		return false
 	credits -= price
-	var levels := upgrade_levels(car_id)
+	var levels := upgrade_levels(bike_id)
 	levels[part] = int(levels[part]) + 1
-	upgrades[car_id] = levels
+	upgrades[bike_id] = levels
 	_save_progress()
 	return true
 
 
-func total_upgrade_levels(car_id: String) -> int:
-	return CarTuning.total_levels(upgrade_levels(car_id))
+func total_upgrade_levels(bike_id: String) -> int:
+	return BikeTuning.total_levels(upgrade_levels(bike_id))
 
 
-## Base def with the car's upgrades applied — used for the player's car only.
-func player_car_def() -> CarDef:
-	return tuned_def_for(current_car_id())
+## Base def with the bike's upgrades applied — used for the player's bike only.
+func player_bike_def() -> BikeDef:
+	return tuned_def_for(current_bike_id())
 
 
-func tuned_def_for(car_id: String) -> CarDef:
-	return CarTuning.apply(car_def_by_id(car_id), upgrade_levels(car_id))
+func tuned_def_for(bike_id: String) -> BikeDef:
+	return BikeTuning.apply(bike_def_by_id(bike_id), upgrade_levels(bike_id))
 
 
 ## Opponent speed multiplier: upgrades keep races competitive as the garage is
 ## filled in; campaign position and difficulty level make later races harder.
 func ai_speed_scale() -> float:
 	return (
-		CarTuning.ai_speed_scale(total_upgrade_levels(current_car_id()))
-		* CarTuning.track_ai_scale(track_index, track_tier)
+		BikeTuning.ai_speed_scale(total_upgrade_levels(current_bike_id()))
+		* BikeTuning.track_ai_scale(track_index, track_tier)
 	)
 
 
@@ -234,16 +243,23 @@ func _load_progress() -> void:
 	races_done = int(cfg.get_value("progress", "races_done", 0))
 	best_pos = int(cfg.get_value("progress", "best_pos", 0))
 	credits = int(cfg.get_value("progress", "credits", 0))
-	car_index = clampi(int(cfg.get_value("progress", "car_index", 0)), 0, CAR_IDS.size() - 1)
+	bike_index = clampi(int(cfg.get_value("progress", "bike_index",
+		cfg.get_value("progress", "car_index", 0))), 0, BIKE_IDS.size() - 1)
 	track_index = clampi(int(cfg.get_value("progress", "track_index", 0)), 0, TRACK_IDS.size() - 1)
 	upgrades = {}
-	for id in CAR_IDS:
+	for i in BIKE_IDS.size():
+		var id: String = BIKE_IDS[i]
 		var saved: Variant = cfg.get_value("upgrades", id, {})
-		upgrades[id] = CarTuning.sanitize(saved if saved is Dictionary else {})
+		# migrate upgrades saved under the pre-bike car ids
+		if (not (saved is Dictionary) or (saved as Dictionary).is_empty()) and i < LEGACY_CAR_IDS.size():
+			var legacy: Variant = cfg.get_value("upgrades", LEGACY_CAR_IDS[i], {})
+			if legacy is Dictionary and not (legacy as Dictionary).is_empty():
+				saved = legacy
+		upgrades[id] = BikeTuning.sanitize(saved if saved is Dictionary else {})
 	unlocked_tracks = clampi(int(cfg.get_value("progress", "unlocked_tracks", 1)), 1, TRACK_IDS.size())
 	track_tiers = {}
 	for id in TRACK_IDS:
-		track_tiers[id] = clampi(int(cfg.get_value("tracks", id, 1)), 1, CarTuning.TRACK_TIERS)
+		track_tiers[id] = clampi(int(cfg.get_value("tracks", id, 1)), 1, BikeTuning.TRACK_TIERS)
 	track_index = clampi(track_index, 0, unlocked_tracks - 1)
 	track_tier = clampi(int(cfg.get_value("progress", "track_tier", 0)), 0, unlocked_tier_count(track_index) - 1)
 
@@ -253,11 +269,11 @@ func _save_progress() -> void:
 	cfg.set_value("progress", "races_done", races_done)
 	cfg.set_value("progress", "best_pos", best_pos)
 	cfg.set_value("progress", "credits", credits)
-	cfg.set_value("progress", "car_index", car_index)
+	cfg.set_value("progress", "bike_index", bike_index)
 	cfg.set_value("progress", "track_index", track_index)
 	cfg.set_value("progress", "track_tier", track_tier)
 	cfg.set_value("progress", "unlocked_tracks", unlocked_tracks)
-	for id in CAR_IDS:
+	for id in BIKE_IDS:
 		cfg.set_value("upgrades", id, upgrade_levels(id))
 	for id in TRACK_IDS:
 		cfg.set_value("tracks", id, int(track_tiers.get(id, 1)))

@@ -1,0 +1,7 @@
+asset: assets/bikes/super_01/body.glb
+model: HCR2 Superbike
+author: oakar258 (https://sketchfab.com/oakar258)
+source: https://sketchfab.com/3d-models/91979ad79916460d92c7697464f2b5f4
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/centered pivot, wheel-node rename, PBR fixes, scaled to bike length (tools/assetgen/process_bike.py)
+date: 2026-09-30

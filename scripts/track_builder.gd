@@ -10,14 +10,14 @@ const LINE_Y := 0.05
 const CURB_Y := 0.07
 const SIDEWALK_Y := 0.035
 ## Boost pads ("ускорялки") replace the old jump ramps: flat glowing strips that
-## kick the car's speed up for a short time instead of launching it into the air.
+## kick the bike's speed up for a short time instead of launching it into the air.
 const PAD_LENGTH := 9.0
 const PAD_WIDTH_MARGIN := 1.0
 const PAD_WIDTH_RATIO := 0.20
 const PAD_COUNT := 5
 const PAD_COLLISION_HEIGHT := 1.6
 ## Nitro pickups ("бутылочки"): rotating bottles that instantly refill part of
-## the car's nitro tank when driven over (player and AI both collect them).
+## the bike's nitro tank when driven over (player and AI both collect them).
 const NITRO_BOTTLE_COUNT := 12
 ## Keep bottles this many samples away from a boost pad so both reads stay clean.
 const NITRO_PICKUP_AVOID_PAD := 26
@@ -375,7 +375,7 @@ func _make_puddles(rng: RandomNumberGenerator) -> Node3D:
 
 ## Invisible physics barrier along the road edge. The old red/white fence was
 ## purely visual, so it is removed and replaced by the curb + street facade;
-## the collision strip stays so cars still cannot leave the track.
+## the collision strip stays so bikes still cannot leave the track.
 func _make_barrier(sign_dir: float) -> StaticBody3D:
 	var n := centerline.size()
 	var offset := sign_dir * (def.road_half_width + 0.4)
@@ -697,7 +697,7 @@ func _make_start_area() -> Node3D:
 	beam.position = Vector3(0, 5.2, 0)
 	root.add_child(beam)
 
-	# Banner facing approaching cars (they travel along +local Z, so they see
+	# Banner facing approaching bikes (they travel along +local Z, so they see
 	# the -Z-facing side placed before the line). Single-sided so no mirrored
 	# text is visible from behind.
 	var banner := Label3D.new()
@@ -777,7 +777,7 @@ func _pick_pad_spots(count: int) -> Array[int]:
 
 
 ## A flat glowing strip on the asphalt, spanning part of the road width
-## (PAD_WIDTH_RATIO) at a random lateral offset. An Area3D kicks the car's
+## (PAD_WIDTH_RATIO) at a random lateral offset. An Area3D kicks the bike's
 ## speed up when it passes over; there is nothing to jump off any more.
 func _make_pad(idx: int, offset := 0.0) -> Area3D:
 	var area := Area3D.new()

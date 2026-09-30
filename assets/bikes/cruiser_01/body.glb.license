@@ -1,0 +1,7 @@
+asset: assets/bikes/cruiser_01/body.glb
+model: Motorcycle Fallout
+author: milinam2002 (https://sketchfab.com/milinam2002)
+source: https://sketchfab.com/3d-models/b93e669f04bc45679d32a905205dc11c
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/centered pivot, wheel-node rename, PBR fixes, scaled to bike length (tools/assetgen/process_bike.py)
+date: 2026-09-30

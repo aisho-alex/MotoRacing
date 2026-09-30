@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BikeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/bike_def.gd" id="1_cdef"]
+
+[resource]
+script = ExtResource("1_cdef")
+model_path = "res://assets/cars/traffic_sedan/body.glb"
+model_scale = 1.0
+model_yaw = 3.1415926
+model_y_offset = 0.0
+collision_size = Vector3(1.7, 0.95, 4.4)
+wheel_radius = 0.33
+livery_dir = "res://assets/cars/traffic_sedan"
+livery_count = 0
+livery_index = 0

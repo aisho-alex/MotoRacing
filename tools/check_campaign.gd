@@ -95,17 +95,17 @@ func _check_tiers(gs: Node) -> int:
 		failures += 1
 	gs.track_tier = 1
 	gs.record_result(true, 1)
-	if gs.unlocked_tier_count(0) != CarTuning.TRACK_TIERS:
+	if gs.unlocked_tier_count(0) != BikeTuning.TRACK_TIERS:
 		print("win should unlock the final tier")
 		failures += 1
-	gs.track_tier = CarTuning.TRACK_TIERS - 1
+	gs.track_tier = BikeTuning.TRACK_TIERS - 1
 	gs.record_result(true, 1)
-	if gs.unlocked_tier_count(0) != CarTuning.TRACK_TIERS:
+	if gs.unlocked_tier_count(0) != BikeTuning.TRACK_TIERS:
 		print("tiers must cap at the maximum")
 		failures += 1
 	var before: int = gs.track_tier
 	gs.cycle_tier(1)
-	if gs.track_tier != 0 or before != CarTuning.TRACK_TIERS - 1:
+	if gs.track_tier != 0 or before != BikeTuning.TRACK_TIERS - 1:
 		print("cycle_tier should wrap only over unlocked tiers")
 		failures += 1
 	return failures
@@ -113,12 +113,12 @@ func _check_tiers(gs: Node) -> int:
 
 func _check_reward_scale() -> int:
 	var failures := 0
-	if CarTuning.track_reward(1, 0, 0) != CarTuning.reward_for(1):
+	if BikeTuning.track_reward(1, 0, 0) != BikeTuning.reward_for(1):
 		print("base track reward should equal the flat reward")
 		failures += 1
-	var early := CarTuning.track_reward(1, 0, 0)
-	var mid := CarTuning.track_reward(1, 5, 1)
-	var late := CarTuning.track_reward(1, 10, 2)
+	var early := BikeTuning.track_reward(1, 0, 0)
+	var mid := BikeTuning.track_reward(1, 5, 1)
+	var late := BikeTuning.track_reward(1, 10, 2)
 	if not (late > mid and mid > early):
 		print("reward should grow with track and tier: %d %d %d" % [early, mid, late])
 		failures += 1
@@ -127,11 +127,11 @@ func _check_reward_scale() -> int:
 
 func _check_ai_scale() -> int:
 	var failures := 0
-	if not is_equal_approx(CarTuning.track_ai_scale(0, 0), 1.0):
+	if not is_equal_approx(BikeTuning.track_ai_scale(0, 0), 1.0):
 		print("first track, first tier should not boost AI")
 		failures += 1
-	if not (CarTuning.track_ai_scale(10, 2) > CarTuning.track_ai_scale(5, 1)
-			and CarTuning.track_ai_scale(5, 1) > CarTuning.track_ai_scale(0, 0)):
+	if not (BikeTuning.track_ai_scale(10, 2) > BikeTuning.track_ai_scale(5, 1)
+			and BikeTuning.track_ai_scale(5, 1) > BikeTuning.track_ai_scale(0, 0)):
 		print("track AI scale should grow with position and tier")
 		failures += 1
 	var gs := _fresh()
@@ -158,16 +158,16 @@ func _check_roundtrip(gs: Node) -> int:
 	gs.track_tier = 1
 	gs.unlocked_tracks = 2
 	gs.credits = 1234
-	gs.upgrades = {"compact_01": {"engine": 2, "tires": 0, "nitro": 1}}
+	gs.upgrades = {"scrambler_01": {"engine": 2, "tires": 0, "nitro": 1}}
 	gs._save_progress()
 	var loaded := _new_game()
 	if loaded.unlocked_tracks != 2 or loaded.track_tier != 1 or loaded.credits != 1234:
 		print("roundtrip lost progress: u=%d t=%d c=%d" % [loaded.unlocked_tracks, loaded.track_tier, loaded.credits])
 		failures += 1
-	if loaded.upgrade_level("compact_01", "engine") != 2:
+	if loaded.upgrade_level("scrambler_01", "engine") != 2:
 		print("roundtrip lost upgrades")
 		failures += 1
-	if loaded.unlocked_tier_count(0) != CarTuning.TRACK_TIERS:
+	if loaded.unlocked_tier_count(0) != BikeTuning.TRACK_TIERS:
 		print("roundtrip lost track tiers")
 		failures += 1
 	return failures
