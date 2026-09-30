@@ -16,6 +16,7 @@ const DETOUR_OFFSET := 2.8
 
 var track: TrackBuilder
 var skill := 0.95       # 0..1, scales target speed
+var speed_mult := 1.0   # extra pace from player upgrades (AI rubber-banding)
 var line_offset := 0.0  # personal corridor beside the centerline (meters)
 var cars: Array[RaceCar] = []  # all racers, for avoidance
 
@@ -316,7 +317,7 @@ func _corner_speed(car: RaceCar) -> float:
 
 
 func _throttle(car: RaceCar, vf: float, slow: float, lat: float = 0.0) -> float:
-	var target_speed := minf(car.def.max_speed * skill, _corner_speed(car))
+	var target_speed := minf(car.def.max_speed * skill * speed_mult, _corner_speed(car))
 	target_speed *= lerpf(0.15, 1.0, slow)
 	if absf(lat) > car.road_half_width - 2.0:
 		target_speed *= 0.7  # near a wall: leave steering margin

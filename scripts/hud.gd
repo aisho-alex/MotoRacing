@@ -127,12 +127,15 @@ func clear_center() -> void:
 	_center_sub.text = ""
 
 
-func show_finish(total: float, best: float, pos: int = 0) -> void:
+func show_finish(total: float, best: float, pos: int = 0, credits: int = 0) -> void:
 	_center_big.label_settings.font_color = Color(1.0, 0.85, 0.25)
 	_center_big.text = "FINISH!"
 	var sub := "RACE TIME %s    BEST LAP %s\nPress R to restart — returning to menu" % [fmt(total), fmt(best)]
 	if pos > 0:
 		sub = "POSITION %d/%d\n%s" % [pos, 4, sub]
+	sub = "%s — %s\n%s" % [Game.track_name(), Game.tier_label(), sub]
+	if credits > 0:
+		sub = "%s\n+%d CREDITS" % [sub, credits]
 	_center_sub.text = sub
 
 

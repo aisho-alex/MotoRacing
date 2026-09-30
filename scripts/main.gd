@@ -38,7 +38,7 @@ func _ready() -> void:
 
 	car = RaceCar.new()
 	car.name = "Car"
-	car.def = Game.car_def()
+	car.def = Game.player_car_def()
 	car.night_lights = tdef.night_racing
 	add_child(car)
 	car.road_half_width = tdef.road_half_width
@@ -90,6 +90,7 @@ func _spawn_opponents() -> void:
 		var yaw := track.tangent_yaw(idx)
 		ai.reset_to(pos, yaw)
 		var driver := AiDriver.new(track, OPPONENT_SKILLS[k], OPPONENT_OFFSETS[k % OPPONENT_OFFSETS.size()])
+		driver.speed_mult = Game.ai_speed_scale()
 		driver.resync(ai)
 		ai.driver = driver
 		racers.append(_racer_entry(ai, false, pos, yaw))
@@ -201,10 +202,10 @@ func _on_race_finished(total: float) -> void:
 	state = State.FINISHED
 	_set_racing_control(false)
 	var pos := _player_position()
-	Game.record_result(true, pos)
+	var earned := Game.record_result(true, pos)
 	_burst_confetti()
 	Audio.play_ui("finish")
-	hud.show_finish(total, tracker.best_lap, pos)
+	hud.show_finish(total, tracker.best_lap, pos, earned)
 	get_tree().create_timer(MENU_RETURN_DELAY).timeout.connect(_return_to_menu)
 
 

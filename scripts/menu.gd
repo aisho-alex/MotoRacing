@@ -4,7 +4,9 @@ extends Control
 
 var _car_label: Label
 var _track_label: Label
+var _tier_label: Label
 var _hint_label: Label
+var _bank_label: Label
 var _credits_panel: PanelContainer
 
 
@@ -53,16 +55,24 @@ func _build_ui() -> void:
 
 	_car_label = _label("", 36, Color.WHITE)
 	_track_label = _label("", 36, Color.WHITE)
+	_tier_label = _label("", 36, Color.WHITE)
 	box.add_child(_picker_row("CAR", _car_label, _on_car_prev, _on_car_next))
 	box.add_child(_picker_row("TRACK", _track_label, _on_track_prev, _on_track_next))
+	box.add_child(_picker_row("LEVEL", _tier_label, _on_tier_prev, _on_tier_next))
 	_hint_label = _label("", 22, Color(1, 1, 1, 0.45))
 	box.add_child(_hint_label)
+	_bank_label = _label("", 24, Color(1.0, 0.85, 0.25, 0.9))
+	box.add_child(_bank_label)
 
 	box.add_child(_spacer(24))
 
 	var start := _button("START RACE", 44)
 	start.pressed.connect(_start_race)
 	box.add_child(start)
+
+	var garage := _button("GARAGE", 28)
+	garage.pressed.connect(_open_garage)
+	box.add_child(garage)
 
 	var quit := _button("QUIT", 26)
 	quit.pressed.connect(_on_quit)
@@ -93,6 +103,16 @@ func _on_track_prev() -> void:
 
 func _on_track_next() -> void:
 	Game.cycle_track(1)
+	_refresh()
+
+
+func _on_tier_prev() -> void:
+	Game.cycle_tier(-1)
+	_refresh()
+
+
+func _on_tier_next() -> void:
+	Game.cycle_tier(1)
 	_refresh()
 
 
@@ -143,10 +163,14 @@ func _toggle_credits() -> void:
 func _refresh() -> void:
 	_car_label.text = Game.car_name()
 	_track_label.text = Game.track_name()
+	_tier_label.text = Game.tier_label()
 	_hint_label.text = _first_lock_hint()
+	_bank_label.text = "%d CREDITS  —  G garage · Q/E level" % Game.credits
 
 
 func _first_lock_hint() -> String:
+	if Game.unlocked_tracks < Game.TRACK_IDS.size():
+		return Game.track_lock_hint(Game.unlocked_tracks)
 	for id in Game.CAR_IDS:
 		if not Game.is_car_unlocked(id):
 			return Game.lock_hint(id)
@@ -158,12 +182,25 @@ func _start_race() -> void:
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 
+func _open_garage() -> void:
+	Audio.play_ui("click")
+	get_tree().change_scene_to_file("res://scenes/garage.tscn")
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if _credits_panel != null and _credits_panel.visible:
 		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_accept"):
 			_toggle_credits()
 		return
-	if event.is_action_pressed("ui_accept"):
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_G:
+		_open_garage()
+	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_Q:
+		Game.cycle_tier(-1)
+		_refresh()
+	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_E:
+		Game.cycle_tier(1)
+		_refresh()
+	elif event.is_action_pressed("ui_accept"):
 		_start_race()
 	elif event.is_action_pressed("ui_cancel"):
 		get_tree().quit()
