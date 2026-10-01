@@ -52,27 +52,18 @@ func _ready() -> void:
 		lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
 		btn.add_child(lbl)
 		btn.size = size
-		if def.left:
-			btn.anchor_left = 0.0
-			btn.anchor_right = 0.0
-			btn.anchor_bottom = 1.0
-			btn.anchor_top = 1.0
-			btn.offset_left = def.offset.x
-			btn.offset_right = def.offset.x + size.x
-			btn.offset_top = def.offset.y
-			btn.offset_bottom = def.offset.y + size.y
-		else:
-			btn.anchor_left = 1.0
-			btn.anchor_right = 1.0
-			btn.anchor_bottom = 1.0
-			btn.anchor_top = 1.0
-			btn.offset_left = def.offset.x
-			btn.offset_right = def.offset.x + size.x
-			btn.offset_top = def.offset.y
-			btn.offset_bottom = def.offset.y + size.y
+		var ax := 0.0 if def.left else 1.0
+		btn.anchor_left = ax
+		btn.anchor_right = ax
+		btn.anchor_top = 1.0
+		btn.anchor_bottom = 1.0
+		btn.offset_left = def.offset.x
+		btn.offset_right = def.offset.x + size.x
+		btn.offset_top = def.offset.y
+		btn.offset_bottom = def.offset.y + size.y
 		add_child(btn)
-		_rects.append(Rect2(def.offset, size))  # local rect; transformed below
 
+	_rects.resize(BUTTON_DEFS.size())
 	_update_rects()
 
 

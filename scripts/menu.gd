@@ -2,6 +2,8 @@ extends Control
 ## Main menu: bike and track pickers plus start/quit. Keyboard (arrows, Enter,
 ## Esc) and mouse both work.
 
+const Ui := preload("res://scripts/ui_kit.gd")
+
 var _bike_label: Label
 var _track_label: Label
 var _tier_label: Label
@@ -198,7 +200,7 @@ func _open_garage() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _credits_panel != null and _credits_panel.visible:
+	if _credits_panel.visible:
 		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_accept"):
 			_toggle_credits()
 		return
@@ -246,26 +248,11 @@ func _picker_row(caption: String, value_label: Label, on_prev: Callable, on_next
 
 
 func _label(text: String, size: int, color: Color) -> Label:
-	var l := Label.new()
-	l.text = text
-	var ls := LabelSettings.new()
-	ls.font = Hud._ui_font()
-	ls.font_size = size
-	ls.font_color = color
-	ls.outline_size = int(size / 4.0)
-	ls.outline_color = Color(0, 0, 0, 0.85)
-	l.label_settings = ls
-	return l
+	return Ui.label(text, size, color)
 
 
 func _button(text: String, size: int) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.add_theme_font_override("font", Hud._ui_font())
-	b.add_theme_font_size_override("font_size", size)
-	b.add_theme_color_override("font_color", Color.WHITE)
-	b.add_theme_color_override("font_hover_color", Color(1.0, 0.85, 0.25))
-	return b
+	return Ui.button(text, size)
 
 
 func _spacer(px: int) -> Control:

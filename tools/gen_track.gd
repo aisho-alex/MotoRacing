@@ -12,7 +12,6 @@ extends SceneTree
 ##   godot --headless --path . -s tools/gen_track.gd -- mode=emit biome=coast seed=104 id=coast_02 display="Coast II"
 
 const SUBDIV := 26  # must mirror TrackBuilder.SUBDIV
-const PAD_COUNT := 5
 const PAD_STRAIGHT_DOT := 0.995
 const PAD_STRAIGHT_LAG := 8
 const PAD_MIN_INDEX := 60
@@ -131,7 +130,7 @@ func _make_layout(seed: int) -> Dictionary:
 		pts.append(Vector3(x * cos(rot) - z * sin(rot), 0.0, x * sin(rot) + z * cos(rot)))
 	var runs := _snap_straights(rng, pts)
 	_rotate_to_start(pts, runs)
-	return {"points": pts, "seed": seed}
+	return {"points": pts}
 
 
 ## Replaces 2-4 runs of 4-6 consecutive control points by a straight chord.
@@ -238,7 +237,7 @@ func _metrics(td: TrackDef) -> Dictionary:
 	return {"length": length, "gap": gap, "radius": radius, "pads": pads}
 
 
-func _passes(td: TrackDef, m: Dictionary) -> bool:
+func _passes(m: Dictionary) -> bool:
 	return m.gap >= GAP_MIN and m.radius >= RADIUS_MIN \
 			and m.length >= LAP_MIN and m.length <= LAP_MAX and m.pads >= PADS_REQUIRED
 
@@ -258,7 +257,7 @@ func _sheet(args: Dictionary) -> void:
 		var layout := _make_layout(seed)
 		var td := _def_from_layout(template, layout.points, "%s_cand" % biome, "", biome)
 		var m := _metrics(td)
-		var ok := _passes(td, m)
+		var ok := _passes(m)
 		layouts.append({"pts": layout.points, "metrics": m, "ok": ok, "seed": seed})
 		lines.append("cell %d,%d  idx=%2d seed=%d  %s  len=%6.0f gap=%6.1f minR=%6.1f pads=%d pts=%d" % [
 			k / COLS, k % COLS, k, seed, "PASS" if ok else "fail",
@@ -281,10 +280,16 @@ func _sheet(args: Dictionary) -> void:
 ## `_01` track; a brand-new biome with neither falls back to TrackDef defaults.
 func _load_template(biome: String, override: String) -> TrackDef:
 	if override != "":
-		return load("%s/%s.tres" % [TRACK_DIR, override]) as TrackDef
+		var res := load("%s/%s.tres" % [TRACK_DIR, override]) as TrackDef
+		if res == null:
+			push_warning("template '%s' not found; using biome default" % override)
+		else:
+			return res
 	var path := "%s/%s_01.tres" % [TRACK_DIR, biome]
 	if ResourceLoader.exists(path):
-		return load(path) as TrackDef
+		var biome_res := load(path) as TrackDef
+		if biome_res != null:
+			return biome_res
 	return TrackDef.new()
 
 
@@ -381,7 +386,7 @@ func _emit(args: Dictionary) -> void:
 	var td := _def_from_layout(template, layout.points, id, display, biome)
 	var m := _metrics(td)
 	print("emit %s seed=%d len=%.0f gap=%.1f minR=%.1f pads=%d pass=%s" % [
-		id, seed, m.length, m.gap, m.radius, m.pads, str(_passes(td, m))])
+		id, seed, m.length, m.gap, m.radius, m.pads, str(_passes(m))])
 	var path := "%s/%s.tres" % [TRACK_DIR, id]
 	_write_tres(td, path)
 	print("saved %s" % path)

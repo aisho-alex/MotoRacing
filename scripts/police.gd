@@ -135,15 +135,7 @@ func _spawn() -> void:
 
 
 func _player_index() -> int:
-	var best := INF
-	var idx := 0
-	var p := player.global_position
-	for i in track.sample_count():
-		var d := track.centerline[i].distance_squared_to(p)
-		if d < best:
-			best = d
-			idx = i
-	return idx
+	return track.nearest_sample(player.global_position)
 
 
 func _build_strobes(host: RaceBike) -> void:

@@ -9,6 +9,10 @@ signal race_finished(total_time: float)
 
 const TOTAL_LAPS := 3
 const SEARCH_WINDOW := 30
+## Respawn points are only stored while the bike is this close to the road edge
+## (slightly wider than RaceBike.OFFROAD_LIMIT so a brief excursion does not
+## leave a stale respawn point behind).
+const SAFE_ROAD_MARGIN := 2.0
 
 var track: TrackBuilder
 var bike: RaceBike
@@ -24,7 +28,6 @@ var last_lap := -1.0
 var _passed_half := false
 var _last_progress := 0.0
 var _last_index := 0
-var _last_dist_sq := 0.0
 
 
 func setup(track_ref: TrackBuilder, bike_ref: RaceBike) -> void:
@@ -112,8 +115,7 @@ func _update_nearest() -> void:
 		best_i = _full_rescan()
 		best = _flat(track.centerline[best_i]).distance_squared_to(p)
 	_last_index = best_i
-	_last_dist_sq = best
-	if best < (track.def.road_half_width + 2.0) * (track.def.road_half_width + 2.0):
+	if best < (track.def.road_half_width + SAFE_ROAD_MARGIN) * (track.def.road_half_width + SAFE_ROAD_MARGIN):
 		var yaw := track.tangent_yaw(best_i)
 		var xf := Transform3D(Basis(Vector3.UP, yaw), track.centerline[best_i] + Vector3.UP * 0.6)
 		bike.last_safe_transform = xf
@@ -129,7 +131,6 @@ func _full_rescan() -> int:
 			best = d
 			best_i = i
 	_last_index = best_i
-	_last_dist_sq = best
 	_last_progress = float(best_i) / float(track.sample_count())
 	return best_i
 
@@ -140,10 +141,10 @@ func _cross_finish_line() -> void:
 		best_lap = lap_time
 	lap_time = 0.0
 	laps_done += 1
+	lap_finished.emit(last_lap, best_lap)
 	if laps_done >= TOTAL_LAPS:
 		finished = true
 		racing = false
 		race_finished.emit(total_time)
 	else:
-		lap_finished.emit(last_lap, best_lap)
 		lap_changed.emit(current_lap(), TOTAL_LAPS)

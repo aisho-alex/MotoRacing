@@ -36,7 +36,6 @@ const AI_SCALE_PER_LEVEL := 0.012
 
 ## Campaign ladder / per-track difficulty tiers.
 const TRACK_TIERS := 3
-const TIER_LABELS := ["I", "II", "III"]
 const LADDER_AI := 0.015      # opponent pace per track position in the ladder
 const TIER_AI := 0.025        # opponent pace per difficulty tier
 const LADDER_REWARD := 0.08   # reward bonus per track position in the ladder

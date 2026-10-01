@@ -4,8 +4,7 @@ extends Resource
 ## physics stats and nitro. An optional GLB (model_path) overrides the
 ## procedural look; when it is empty the bike is assembled from primitives by
 ## scripts/bike_visuals.gd with a seated rider on top.
-## A default instance mirrors the original hardcoded race_bike.gd constants, so
-## the game runs unchanged before real .tres definitions exist.
+## A default instance is a safe fallback when a .tres definition is missing.
 
 const DEFAULT_PATH := "res://assets/data/bikes/sport_01.tres"
 
@@ -55,6 +54,10 @@ const DEFAULT_PATH := "res://assets/data/bikes/sport_01.tres"
 @export var offroad_grip := 2.8
 @export var offroad_drag := 2.2
 @export var steer_rate := 2.1
+## Yaw-authority curve shared by the bike physics and the AI's pure pursuit:
+## steering effect saturates over STEER_SPEED_REF m/s and eases off with speed.
+const STEER_SPEED_REF := 7.0
+const STEER_HIGH_SPEED_DAMP := 0.45
 
 @export_group("Nitro")
 @export var nitro_max := 100.0
@@ -69,6 +72,15 @@ const DEFAULT_PATH := "res://assets/data/bikes/sport_01.tres"
 
 func livery_path(index: int) -> String:
 	return "%s/livery_%d.webp" % [livery_dir, index]
+
+
+## Yaw authority (turn rate per unit steer) at the given forward speed. Kept in
+## one place so the player physics and the AI controller cannot drift apart.
+func steer_authority(speed: float) -> float:
+	var s := absf(speed)
+	return steer_rate \
+		* clampf(s / STEER_SPEED_REF, 0.0, 1.0) \
+		* (1.0 - STEER_HIGH_SPEED_DAMP * clampf(s / maxf(max_speed, 1.0), 0.0, 1.0))
 
 
 static func load_default() -> BikeDef:

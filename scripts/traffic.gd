@@ -21,7 +21,7 @@ const SPEED_MULT := 0.35
 const NM_RANGE := 9.0          # player-car distance that counts as a close pass
 const NM_CONTACT := 1.9        # closer than this is a collision, not a near miss
 const NM_LATERAL := 2.8        # widest gap that still counts as "near"
-const NM_MIN_REL_SPEED := 8.0  # m/s: must be moving to be a near miss
+const NM_MIN_PLAYER_SPEED := 8.0  # m/s: the player must be moving for a pass to count
 const NM_REWARD := 12.0        # nitro granted per pass
 const NM_CHAIN_WINDOW := 4.0   # s to keep a chain alive
 const NM_CHAIN_TARGET := 3     # passes inside the window double the reward
@@ -47,7 +47,7 @@ func start() -> void:
 	_active = true
 	_rng.randomize()
 	_timer = 0.0
-	_maintain(true)
+	_maintain()
 
 
 func stop() -> void:
@@ -71,10 +71,10 @@ func _process(delta: float) -> void:
 	_timer -= delta
 	if _timer <= 0.0:
 		_timer = 0.5
-		_maintain(false)
+		_maintain()
 
 
-func _maintain(initial: bool) -> void:
+func _maintain() -> void:
 	# recycle cars the player has left far behind
 	var kept: Array = []
 	for c in cars:
@@ -91,8 +91,6 @@ func _maintain(initial: bool) -> void:
 	while cars.size() < COUNT:
 		if not _spawn_one():
 			break
-	if initial:
-		pass
 
 
 ## Per-car close-pass tracking. A pass is resolved when the car crosses from
@@ -128,7 +126,7 @@ func _resolve_pass(st: Dictionary) -> void:
 	var md := float(st.get("min_dist", INF))
 	if md < NM_CONTACT or md > NM_LATERAL:
 		return
-	if player.velocity.length() < NM_MIN_REL_SPEED:
+	if player.velocity.length() < NM_MIN_PLAYER_SPEED:
 		return
 	_nm_chain += 1
 	_nm_chain_timer = NM_CHAIN_WINDOW
@@ -175,12 +173,4 @@ func _spawn_one() -> bool:
 
 
 func _player_index() -> int:
-	var best := INF
-	var idx := 0
-	var p := player.global_position
-	for i in track.sample_count():
-		var d := track.centerline[i].distance_squared_to(p)
-		if d < best:
-			best = d
-			idx = i
-	return idx
+	return track.nearest_sample(player.global_position)

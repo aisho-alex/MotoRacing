@@ -19,7 +19,7 @@ const HEALTH_MAX := 100.0
 const PUNCH_DAMAGE := 13.0
 const KICK_DAMAGE := 22.0
 const ATTACK_COOLDOWN := 0.45
-const WIPEOUT_TIME := 4.2  # full rider recovery: eject, get up, run, lift, remount
+const WIPEOUT_TIME := Rider.CRASH_TOTAL  # canonical timeline lives in rider.gd
 const CRASH_IMPACT_SPEED := 26.0  # hard hit above this speed = instant wipeout
 const VEHICLE_HIT_SPEED := 10.0   # m/s into a traffic car / bike that starts hurting
 const WALL_HIT_SPEED := 14.0      # m/s into a wall that starts hurting
@@ -172,14 +172,7 @@ func _physics_process(delta: float) -> void:
 	var vl := velocity.dot(right)
 
 	# --- steering (stronger at low speed, reversed while driving backwards)
-	var speed_ratio := absf(vf) / def.max_speed
-	var turn := (
-		steer
-		* def.steer_rate
-		* clampf(absf(vf) / 7.0, 0.0, 1.0)
-		* (1.0 - 0.45 * speed_ratio)
-		* signf(vf)
-	)
+	var turn := steer * def.steer_authority(vf) * signf(vf)
 	rotation.y -= turn * delta
 	fwd = -global_transform.basis.z
 	fwd.y = 0.0
@@ -265,11 +258,17 @@ func _try_attack(side: float, kind: String) -> void:
 		target.take_hit(KICK_DAMAGE if kind == "kick" else PUNCH_DAMAGE, global_position, self)
 
 
+## A combat/draft target that is valid, not us, and upright. Shared by the
+## attack scan and the slipstream scan so both agree on what counts as a target.
+func _live_target(t: RaceBike) -> bool:
+	return t != self and is_instance_valid(t) and not t.wiped_out_now
+
+
 func _find_attack_target(side: float, kind: String) -> RaceBike:
 	var best: RaceBike = null
 	var best_d := INF
 	for t in combat_targets:
-		if t == self or not is_instance_valid(t) or t.wiped_out_now:
+		if not _live_target(t):
 			continue
 		var local: Vector3 = global_transform.basis.inverse() * (t.global_position - global_position)
 		var ok := false
@@ -298,7 +297,6 @@ func take_hit(damage: float, from_pos: Vector3, from: RaceBike = null) -> void:
 		grudge_timer = 4.0
 	if rider != null:
 		rider.hit()
-	Audio.play_at("impacts/hit_light", global_position, 0.0)
 	if health <= 0.0:
 		_start_wipeout()
 
@@ -313,16 +311,15 @@ func apply_crash_impact(source: RaceBike, impact: float) -> void:
 	if source != null:
 		if impact < VEHICLE_HIT_SPEED:
 			return
-		damage = clampf(12.0 + impact * 1.6, 10.0, 40.0)
+		damage = minf(12.0 + impact * 1.6, 40.0)
 	else:
 		if impact < WALL_HIT_SPEED:
 			return
-		damage = clampf((impact - 10.0) * 1.2, 6.0, 25.0)
+		damage = clampf((impact - WALL_HIT_SPEED) * 1.2, 6.0, 25.0)
 	_crash_hurt_cooldown = CRASH_HURT_COOLDOWN
 	health = maxf(health - damage, 0.0)
 	if rider != null:
 		rider.hit()
-	Audio.play_at("impacts/hit_light", global_position, 0.0)
 	if health <= 0.0:
 		_start_wipeout()
 
@@ -352,9 +349,9 @@ func _apply_bump(other: RaceBike, normal: Vector3, impact: float) -> void:
 	away = away.normalized()
 	var side := other.global_transform.basis.x.dot(away)
 	var wobble := signf(side if absf(side) > 0.05 else 1.0)
-	other._wobble += wobble * clampf(impact * 0.1, 0.4, 2.4)
-	other.velocity += away * clampf(impact * 0.25, 1.0, 6.0)
-	velocity -= away * clampf(impact * 0.15, 0.5, 4.0)
+	other._wobble += wobble * minf(impact * 0.1, 2.4)
+	other.velocity += away * minf(impact * 0.25, 6.0)
+	velocity -= away * minf(impact * 0.15, 4.0)
 
 
 func _start_wipeout() -> void:
@@ -364,6 +361,7 @@ func _start_wipeout() -> void:
 	_wipeout_timer = WIPEOUT_TIME
 	_wobble = 0.0
 	velocity *= 0.5
+	_fall_side = 1.0 if randf() < 0.5 else -1.0
 	if rider != null:
 		_detach_rider()
 		rider.crash(_fall_side)
@@ -387,27 +385,26 @@ func _update_wipeout(delta: float) -> void:
 
 
 func _detach_rider() -> void:
-	var g := rider.global_transform
-	var parent := rider.get_parent()
-	if parent != null:
-		parent.remove_child(rider)
-	add_child(rider)
-	rider.global_transform = g
+	_reparent_rider(self)
 
 
 func _attach_rider() -> void:
+	_reparent_rider(_tilt)
+
+
+func _reparent_rider(to: Node) -> void:
 	var g := rider.global_transform
 	var parent := rider.get_parent()
 	if parent != null:
 		parent.remove_child(rider)
-	_tilt.add_child(rider)
+	to.add_child(rider)
 	rider.global_transform = g
 
 
 func _remount() -> void:
 	wiped_out_now = false
 	health = HEALTH_MAX
-	_attack_cooldown = 0.5
+	_attack_cooldown = ATTACK_COOLDOWN
 	_lean_roll = 0.0
 	if _tilt != null:
 		_tilt.rotation.z = 0.0
@@ -488,7 +485,6 @@ func _update_nitro(delta: float, request: bool) -> void:
 		_nitro_regen_timer = 0.0
 		_pad_boost_timer = 0.0
 		_draft_mult = 1.0
-		_drafting = false
 		return
 	_pad_boost_timer = maxf(_pad_boost_timer - delta, 0.0)
 	nitro_active = request and nitro > 0.0
@@ -513,7 +509,7 @@ func _update_draft(delta: float, vf: float) -> void:
 	var found := false
 	if control_enabled and not wiped_out_now and vf > 2.0 and not _offroad_now:
 		for t in combat_targets:
-			if t == self or not is_instance_valid(t) or t.wiped_out_now:
+			if not _live_target(t):
 				continue
 			if t.velocity.length() < DRAFT_MIN_SPEED:
 				continue
@@ -813,9 +809,9 @@ func _build_vfx() -> void:
 	spark.material = spark_mat
 
 	_smoke.append(_make_vfx_node(puff, Vector3(0.0, 0.25, 0.72), Color(0.7, 0.7, 0.72, 0.5),
-		14, 0.7, Vector3(0, 1.4, 0), false))
+		14, 0.7, Vector3(0, 1.4, 0)))
 	_dust.append(_make_vfx_node(dust_mesh, Vector3(0.0, 0.25, 0.72), Color(0.62, 0.52, 0.38, 0.55),
-		12, 0.8, Vector3(0, 1.8, 0), false))
+		12, 0.8, Vector3(0, 1.8, 0)))
 
 	var up := Vector3.UP
 	_sparks = GPUParticles3D.new()
@@ -842,12 +838,11 @@ func _build_vfx() -> void:
 
 
 func _make_vfx_node(mesh: Mesh, pos: Vector3, color: Color, amount: int,
-		lifetime: float, gravity: Vector3, one_shot: bool) -> GPUParticles3D:
+		lifetime: float, gravity: Vector3) -> GPUParticles3D:
 	var p := GPUParticles3D.new()
 	p.position = pos
 	p.amount = amount
 	p.lifetime = lifetime
-	p.one_shot = one_shot
 	p.local_coords = false
 	p.emitting = false
 	var pm := ParticleProcessMaterial.new()

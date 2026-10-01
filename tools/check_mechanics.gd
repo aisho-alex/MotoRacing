@@ -17,6 +17,7 @@ var BikeScript
 var DefScript
 var TrafficScript
 var HealthScript
+var NitroScript
 
 
 func _initialize() -> void:
@@ -31,9 +32,11 @@ func _process(_delta: float) -> bool:
 	DefScript = load("res://scripts/bike_def.gd")
 	TrafficScript = load("res://scripts/traffic.gd")
 	HealthScript = load("res://scripts/health_pickup.gd")
+	NitroScript = load("res://scripts/nitro_pickup.gd")
 	var backup := _read(SAVE)
 	var failures := 0
 	failures += _check_health_pickup()
+	failures += _check_traffic_pickups()
 	failures += _check_draft()
 	failures += _check_near_miss()
 	failures += _check_records()
@@ -73,6 +76,69 @@ func _check_health_pickup() -> int:
 		print("health: heal not clamped to max (%.1f)" % a.health)
 		failures += 1
 	a.queue_free()
+	return failures
+
+
+## Traffic cars are RaceBikes too, so they must be filtered out of the pickup and
+## boost-pad handlers: only racers (player + AI opponents) collect them.
+func _check_traffic_pickups() -> int:
+	var failures := 0
+	# nitro bottle: ignored by traffic, still collected by a racer
+	var nitro_pickup = NitroScript.new()
+	root.add_child(nitro_pickup)
+	var traffic = _make_bike()
+	traffic.is_traffic = true
+	traffic.nitro = 10.0
+	nitro_pickup._on_body_entered(traffic)
+	if not is_equal_approx(traffic.nitro, 10.0):
+		print("traffic: nitro bottle collected by a traffic car (%.1f)" % traffic.nitro)
+		failures += 1
+	if nitro_pickup._respawn > 0.0:
+		print("traffic: nitro bottle was consumed by a traffic car")
+		failures += 1
+	var racer = _make_bike()
+	racer.nitro = 10.0
+	nitro_pickup._on_body_entered(racer)
+	if racer.nitro <= 10.0:
+		print("traffic: nitro bottle no longer collected by a racer (%.1f)" % racer.nitro)
+		failures += 1
+	# health pack: ignored by traffic, still collected by a racer
+	var health_pickup = HealthScript.new()
+	root.add_child(health_pickup)
+	var traffic2 = _make_bike()
+	traffic2.is_traffic = true
+	traffic2.health = 20.0
+	health_pickup._on_body_entered(traffic2)
+	if not is_equal_approx(traffic2.health, 20.0):
+		print("traffic: health pack collected by a traffic car (%.1f)" % traffic2.health)
+		failures += 1
+	if health_pickup._respawn > 0.0:
+		print("traffic: health pack was consumed by a traffic car")
+		failures += 1
+	var racer2 = _make_bike()
+	racer2.health = 20.0
+	health_pickup._on_body_entered(racer2)
+	if racer2.health <= 20.0:
+		print("traffic: health pack no longer collected by a racer (%.1f)" % racer2.health)
+		failures += 1
+	# boost pad: ignored by traffic, still fires for a racer
+	var track := TrackBuilder.new()
+	root.add_child(track)
+	var traffic3 = _make_bike()
+	traffic3.is_traffic = true
+	traffic3._pad_boost_timer = 0.0
+	track._on_pad_body_entered(traffic3)
+	if traffic3._pad_boost_timer > 0.0:
+		print("traffic: boost pad fired for a traffic car (%.2f)" % traffic3._pad_boost_timer)
+		failures += 1
+	var racer3 = _make_bike()
+	racer3._pad_boost_timer = 0.0
+	track._on_pad_body_entered(racer3)
+	if racer3._pad_boost_timer <= 0.0:
+		print("traffic: boost pad no longer fires for a racer")
+		failures += 1
+	for n in [nitro_pickup, health_pickup, track, traffic, traffic2, traffic3, racer, racer2, racer3]:
+		n.queue_free()
 	return failures
 
 

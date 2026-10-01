@@ -23,7 +23,8 @@ const HIT_TIME := 0.30
 
 ## Wipeout recovery timeline (seconds from crash()). Each boundary is the end of a
 ## phase: the rider is ejected, gets up, runs to the bike, lifts it upright and
-## finally climbs back on. CRASH_TOTAL must match RaceBike.WIPEOUT_TIME.
+## finally climbs back on. CRASH_TOTAL is the canonical duration; RaceBike's
+## WIPEOUT_TIME references it.
 const CRASH_EJECT_END := 0.80
 const CRASH_GETUP_END := 1.35
 const CRASH_RUN_END := 2.40
@@ -134,11 +135,11 @@ func set_lean(roll: float) -> void:
 ## and whether nitro/boost is active.
 func set_drive(steer: float, speed_ratio: float, nitro: bool) -> void:
 	_steer = steer
-	_speed = clampf(speed_ratio, 0.0, 1.0)
+	_speed = speed_ratio
 	_nitro = nitro
 
 
-## side: +1 left, -1 right. kind: "punch" or "kick".
+## side: +1 right, -1 left. kind: "punch" or "kick".
 func attack(side: float, kind: String = "punch") -> void:
 	if _crash_t >= 0.0:
 		return
@@ -163,13 +164,6 @@ func crash(side: float = 0.0) -> void:
 	crash_phase = "eject"
 	rotation = Vector3.ZERO
 	position = _base_pos
-
-
-## Fraction of the wipeout recovery completed (0..1).
-func crash_progress() -> float:
-	if _crash_t < 0.0:
-		return 0.0
-	return clampf(_crash_t / CRASH_TOTAL, 0.0, 1.0)
 
 
 func is_remounting() -> bool:
@@ -199,8 +193,8 @@ func _build_targets(def: BikeDef) -> void:
 		peg = def.peg_local
 	grip -= mount
 	peg -= mount
-	_hand_base = {"L": Vector3(grip.x, grip.y, grip.z), "R": Vector3(-grip.x, grip.y, grip.z)}
-	_foot_base = {"L": Vector3(peg.x, peg.y, peg.z), "R": Vector3(-peg.x, peg.y, peg.z)}
+	_hand_base = {"L": grip, "R": Vector3(-grip.x, grip.y, grip.z)}
+	_foot_base = {"L": peg, "R": Vector3(-peg.x, peg.y, peg.z)}
 	_hand_target = {"L": _hand_base["L"], "R": _hand_base["R"]}
 	_foot_target = {"L": _foot_base["L"], "R": _foot_base["R"]}
 
@@ -298,20 +292,20 @@ func _apply_crash_motion() -> void:
 	var beside: Vector3 = _base_pos + Vector3(side * 0.52, -0.18, 0.02)
 	if t < CRASH_EJECT_END:
 		var p: float = t / CRASH_EJECT_END
-		var e: float = p * p * (3.0 - 2.0 * p)
+		var e: float = _smooth(p)
 		var arc: float = 4.0 * p * (1.0 - p)
 		position = _base_pos.lerp(landing, e) + Vector3.UP * (0.55 * arc)
 		rotation = Vector3(0.35 * arc, 0.0, -side * TAU * e)
 		crash_phase = "eject"
 	elif t < CRASH_GETUP_END:
 		var p: float = (t - CRASH_EJECT_END) / (CRASH_GETUP_END - CRASH_EJECT_END)
-		var e: float = p * p * (3.0 - 2.0 * p)
+		var e: float = _smooth(p)
 		position = landing
 		rotation = Vector3(lerpf(0.45, 0.0, e), 0.0, lerp_angle(-side * TAU, 0.0, e))
 		crash_phase = "getup"
 	elif t < CRASH_RUN_END:
 		var p: float = (t - CRASH_GETUP_END) / (CRASH_RUN_END - CRASH_GETUP_END)
-		var e: float = p * p * (3.0 - 2.0 * p)
+		var e: float = _smooth(p)
 		position = landing.lerp(beside, e) + Vector3.UP * absf(sin(t * 13.0)) * 0.04
 		rotation = Vector3.ZERO
 		crash_phase = "run"
@@ -323,7 +317,7 @@ func _apply_crash_motion() -> void:
 		crash_phase = "lift"
 	else:
 		var p: float = clampf((t - CRASH_LIFT_END) / (CRASH_TOTAL - CRASH_LIFT_END), 0.0, 1.0)
-		var e: float = p * p * (3.0 - 2.0 * p)
+		var e: float = _smooth(p)
 		position = beside.lerp(_base_pos, e) + Vector3.UP * (0.30 * 4.0 * p * (1.0 - p))
 		rotation = Vector3(0.0, -side * 0.28 * (1.0 - e), 0.0)
 		crash_phase = "mount"
@@ -370,7 +364,7 @@ func _attack_weights() -> Dictionary:
 		var q: float = (p - 0.28) / 0.27
 		return {"wind": 1.0 - q, "strike": sin(q * PI)}
 	var q2: float = (p - 0.55) / 0.45
-	return {"wind": 0.0, "strike": (1.0 - q2) * 0.0}
+	return {"wind": 0.0, "strike": 1.0 - q2}
 
 
 func _apply_torso(attack: Dictionary) -> void:

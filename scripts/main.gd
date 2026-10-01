@@ -17,6 +17,7 @@ var state: State = State.COUNTDOWN
 var state_timer := COUNTDOWN_TIME
 var go_timer := 0.0
 var _last_countdown := 3
+var _lap_record_this_race := false
 
 var track: TrackBuilder
 var bike: RaceBike
@@ -66,9 +67,8 @@ func _ready() -> void:
 	hud = Hud.new()
 	hud.name = "Hud"
 	add_child(hud)
-	hud.reset_race()
-	hud.set_record(Game.best_lap_at(Game.track_index, Game.track_tier),
-			Game.best_race_at(Game.track_index, Game.track_tier))
+	hud.reset_race(LapTracker.TOTAL_LAPS, racers.size())
+	hud.set_record(Game.best_lap_at(Game.track_index, Game.track_tier))
 	hud.show_countdown(3)
 
 	bike.wiped_out.connect(_on_player_wipeout)
@@ -187,7 +187,7 @@ func _process(delta: float) -> void:
 				if n != _last_countdown:
 					_last_countdown = n
 					hud.show_countdown(n)
-					Audio.play_ui("countdown_%d" % clampi(n, 1, 3))
+					Audio.play_ui("countdown_%d" % n)
 		State.RACING:
 			if go_timer > 0.0:
 				go_timer -= delta
@@ -219,6 +219,7 @@ func _restart_race() -> void:
 	state_timer = COUNTDOWN_TIME
 	go_timer = 0.0
 	_last_countdown = -1
+	_lap_record_this_race = false
 	_set_racing_control(false)
 	_place_bike_at_start()
 	for r in racers:
@@ -229,7 +230,7 @@ func _restart_race() -> void:
 		r.progress.reset()
 	tracker.reset()
 	cam.snap_behind(bike)
-	hud.reset_race()
+	hud.reset_race(LapTracker.TOTAL_LAPS, racers.size())
 	hud.show_countdown(3)
 	if police != null:
 		police.clear()
@@ -254,6 +255,7 @@ func _on_lap_finished(lap_time: float, best: float) -> void:
 	Audio.play_ui("lap")
 	hud.update_race_info(tracker.lap_time, best, lap_time)
 	if Game.record_lap(Game.track_index, Game.track_tier, lap_time):
+		_lap_record_this_race = true
 		hud.show_toast("NEW LAP RECORD!", Color(1.0, 0.85, 0.25), Hud.fmt(lap_time), 1.5)
 
 
@@ -264,11 +266,11 @@ func _on_race_finished(total: float) -> void:
 	traffic.stop()
 	var pos := _player_position()
 	var earned := Game.record_result(true, pos)
-	var new_lap := Game.record_lap(Game.track_index, Game.track_tier, tracker.best_lap)
+	var new_lap := _lap_record_this_race
 	var new_race := Game.record_race(Game.track_index, Game.track_tier, total)
 	_burst_confetti()
 	Audio.play_ui("finish")
-	hud.show_finish(total, tracker.best_lap, pos, earned, new_lap or new_race)
+	hud.show_finish(total, tracker.best_lap, pos, racers.size(), earned, new_lap or new_race)
 	get_tree().create_timer(MENU_RETURN_DELAY).timeout.connect(_return_to_menu)
 
 

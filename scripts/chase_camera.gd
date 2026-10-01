@@ -2,7 +2,7 @@ class_name ChaseCamera
 extends Camera3D
 ## Smooth follow camera that trails behind the bike; FOV widens with speed.
 
-var target: Node3D
+var target: RaceBike
 
 var _dist := 8.5
 var _height := 4.2
@@ -25,15 +25,10 @@ func _physics_process(delta: float) -> void:
 	if target == null:
 		return
 	_time += delta
-	var spd := 0.0
-	var lateral_speed := 0.0
-	var boosting := false
-	var max_spd := 32.0
-	if target is RaceBike:
-		spd = target.velocity.length()
-		lateral_speed = target.velocity.dot(target.global_transform.basis.x)
-		boosting = target.is_nitro_active()
-		max_spd = target.def.max_speed
+	var spd := target.velocity.length()
+	var lateral_speed := target.velocity.dot(target.global_transform.basis.x)
+	var boosting := target.is_nitro_active()
+	var max_spd := target.def.max_speed
 	var speed_ratio := clampf(spd / maxf(max_spd, 1.0), 0.0, 1.0)
 	_nitro_kick = lerpf(_nitro_kick, 10.0 if boosting else 0.0, 1.0 - exp(-4.5 * delta))
 	_dist_push = lerpf(_dist_push, 1.35 if boosting else 0.0, 1.0 - exp(-3.0 * delta))

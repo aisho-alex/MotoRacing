@@ -52,11 +52,6 @@ func play_music(track_name: String) -> void:
 	_music.play()
 
 
-func stop_music() -> void:
-	_music_name = ""
-	_music.stop()
-
-
 ## Positional one-shot (impacts etc.) placed in the current scene.
 func play_at(rel: String, pos: Vector3, volume_db := 0.0) -> void:
 	var s := stream(rel)

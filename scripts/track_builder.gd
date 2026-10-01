@@ -22,9 +22,6 @@ const NITRO_BOTTLE_COUNT := 8
 ## Repair packs ("аптечки"): fewer than nitro bottles, so healing is a real
 ## decision rather than a constant stream.
 const HEALTH_PACK_COUNT := 5
-## Preloaded so headless tools work even before the editor refreshes the global
-## class cache with the new script.
-const HealthPickupScript := preload("res://scripts/health_pickup.gd")
 ## Keep bottles this many samples away from a boost pad so both reads stay clean.
 const NITRO_PICKUP_AVOID_PAD := 26
 ## Curb kit (Kenney "City Kit (Roads)", CC0): one 1 m one-sided curb segment
@@ -36,6 +33,8 @@ const CURB_KIT: Array[String] = ["curb_straight_a"]
 const CURB_STEP := 0.8
 const CITY_BUILDING_MIN_LATERAL := 48.0
 const CITY_BUILDING_FOOTPRINT_RADIUS := 19.0
+## Clearance between the road edge and any decor footprint candidate (m).
+const ROAD_DECOR_MARGIN := 3.5
 const CITY_BUILDING_MIN_CENTER_DISTANCE := 42.0
 const CITY_SKYLINE_FOOTPRINT_RADIUS := 16.0
 const CITY_SKYLINE_MIN_GAP := 26.0
@@ -98,6 +97,9 @@ var _light_pool_mesh: QuadMesh
 var _light_pool_material: StandardMaterial3D
 var _puddle_mesh: QuadMesh
 var _puddle_material: StandardMaterial3D
+## Boost-pad spots are deterministic per track, so compute them once.
+var _pad_spots_ready := false
+var _pad_spots_cache: Array[int] = []
 
 
 func build() -> void:
@@ -139,18 +141,43 @@ func sample_count() -> int:
 
 
 ## Approximate world-space distance between adjacent centerline samples.
-func sample_spacing(i: int = -1) -> float:
+func sample_spacing(i: int) -> float:
 	var n := centerline.size()
 	if n < 2:
 		return 1.9
-	if i < 0:
-		i = 0
 	return centerline[i].distance_to(centerline[(i + 1) % n])
 
 
 func tangent_yaw(i: int) -> float:
 	var t := tangents[i]
 	return atan2(-t.x, -t.z)
+
+
+## Index of the centerline sample nearest to `p`. `window` > 0 searches only
+## around `from_index`; window <= 0 scans the whole track. Single source for the
+## nearest-point search shared by AI, police, traffic and lap tracking.
+func nearest_sample(p: Vector3, from_index: int = -1, window: int = 0) -> int:
+	var n := centerline.size()
+	if n == 0:
+		return 0
+	if window > 0 and from_index >= 0:
+		var best := INF
+		var best_i := from_index
+		for k in range(-window, window + 1):
+			var i := (from_index + k + n) % n
+			var d := centerline[i].distance_squared_to(p)
+			if d < best:
+				best = d
+				best_i = i
+		return best_i
+	var best_full := INF
+	var best_full_i := 0
+	for i in n:
+		var d := centerline[i].distance_squared_to(p)
+		if d < best_full:
+			best_full = d
+			best_full_i = i
+	return best_full_i
 
 
 func side_vector(i: int) -> Vector3:
@@ -650,15 +677,14 @@ func _make_light_pool() -> MeshInstance3D:
 func _make_reflection_probes() -> Node3D:
 	var root := Node3D.new()
 	root.name = "ReflectionProbes"
-	for ratio in [0.5]:
-		var idx := int(float(centerline.size()) * ratio) % centerline.size()
-		var probe := ReflectionProbe.new()
-		probe.position = centerline[idx] + Vector3.UP * 10.0
-		probe.size = Vector3(170.0, 58.0, 170.0)
-		probe.max_distance = 260.0
-		probe.intensity = 1.15
-		probe.update_mode = ReflectionProbe.UPDATE_ONCE
-		root.add_child(probe)
+	var idx := int(float(centerline.size()) * 0.5) % centerline.size()
+	var probe := ReflectionProbe.new()
+	probe.position = centerline[idx] + Vector3.UP * 10.0
+	probe.size = Vector3(170.0, 58.0, 170.0)
+	probe.max_distance = 260.0
+	probe.intensity = 1.15
+	probe.update_mode = ReflectionProbe.UPDATE_ONCE
+	root.add_child(probe)
 	return root
 
 
@@ -744,7 +770,7 @@ func _make_boost_pads() -> Node3D:
 	root.name = "BoostPads"
 	var rng := RandomNumberGenerator.new()
 	rng.seed = def.decor_seed ^ 0x7C3F
-	var spots := _pick_pad_spots(PAD_COUNT)
+	var spots := _pad_spots()
 	for k in spots.size():
 		var w := _pad_width()
 		# random lateral placement: a narrow strip, so the line choice is
@@ -806,55 +832,67 @@ func _make_pad(idx: int, offset := 0.0) -> Area3D:
 
 
 func _on_pad_body_entered(body: Node3D) -> void:
+	if "is_traffic" in body and body.is_traffic:
+		return
 	if body.has_method("apply_pad_boost"):
 		body.call("apply_pad_boost")
+
+
+## Nitro bottles and repair packs share the same even arc-length spread and the
+## same lateral placement; only the class, count, seed and collision filters
+## differ. `script` is the pickup class (NitroPickup / HealthPickup).
+func _make_pickups(root_name: String, script, node_name: String,
+		spots: Array[int], seed: int) -> Node3D:
+	var root := Node3D.new()
+	root.name = root_name
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var max_offset := maxf(def.road_half_width - 1.3, 0.0)
+	for idx in spots:
+		var pickup: Node3D = script.new()
+		pickup.name = node_name
+		var offset := rng.randf_range(-1.0, 1.0) * max_offset
+		pickup.position = centerline[idx] + side_vector(idx) * offset + Vector3.UP * ROAD_Y
+		pickup.rotation.y = rng.randf() * TAU
+		root.add_child(pickup)
+	return root
 
 
 ## Nitro bottles spread evenly along the lap with a random lateral offset inside
 ## the road, so the line choice is "swing for the refill or stay clean".
 func _make_nitro_pickups() -> Node3D:
-	var root := Node3D.new()
-	root.name = "NitroPickups"
-	var rng := RandomNumberGenerator.new()
-	rng.seed = def.decor_seed ^ 0x2B9D
-	var max_offset := maxf(def.road_half_width - 1.3, 0.0)
-	for idx in _pick_bottle_spots(NITRO_BOTTLE_COUNT):
-		var pickup := NitroPickup.new()
-		pickup.name = "NitroBottle"
-		var offset := rng.randf_range(-1.0, 1.0) * max_offset
-		pickup.position = centerline[idx] + side_vector(idx) * offset + Vector3.UP * ROAD_Y
-		pickup.rotation.y = rng.randf() * TAU
-		root.add_child(pickup)
-	return root
+	return _make_pickups("NitroPickups", NitroPickup, "NitroBottle",
+			_pick_bottle_spots(NITRO_BOTTLE_COUNT), def.decor_seed ^ 0x2B9D)
 
 
 ## Even arc-length spread of sample indices for repair packs, avoiding the
 ## boost pads and the nitro bottles so each pickup stays a distinct read.
 func _make_health_pickups() -> Node3D:
-	var root := Node3D.new()
-	root.name = "HealthPickups"
-	var rng := RandomNumberGenerator.new()
-	rng.seed = def.decor_seed ^ 0x51A7
-	var max_offset := maxf(def.road_half_width - 1.3, 0.0)
-	for idx in _pick_health_spots(HEALTH_PACK_COUNT):
-		var pickup := HealthPickupScript.new()
-		pickup.name = "HealthPack"
-		var offset := rng.randf_range(-1.0, 1.0) * max_offset
-		pickup.position = centerline[idx] + side_vector(idx) * offset + Vector3.UP * ROAD_Y
-		pickup.rotation.y = rng.randf() * TAU
-		root.add_child(pickup)
-	return root
+	return _make_pickups("HealthPickups", HealthPickup, "HealthPack",
+			_pick_health_spots(HEALTH_PACK_COUNT), def.decor_seed ^ 0x5C11)
+
+
+## Even arc-length spread of sample indices for nitro bottles, kept off the start
+## straight and away from the boost pads. A small per-slot jitter (seeded) keeps
+## laps from feeling identical without clustering bottles together; if a slot is
+## blocked the nearest free neighbour is used instead.
+func _pick_bottle_spots(count: int) -> Array[int]:
+	return _pick_spread_spots(count, def.decor_seed ^ 0x6F21, [], _pad_spots())
 
 
 func _pick_health_spots(count: int) -> Array[int]:
+	# taken starts with the nitro bottles so a pack never shares their slot
+	var taken := _pick_bottle_spots(NITRO_BOTTLE_COUNT).duplicate()
+	return _pick_spread_spots(count, def.decor_seed ^ 0x3C0D, taken, _pad_spots())
+
+
+func _pick_spread_spots(count: int, seed: int, taken: Array[int],
+		pads: Array[int]) -> Array[int]:
 	var n := sample_count()
 	if n < 2:
 		return []
-	var pads := _pick_pad_spots(PAD_COUNT)
-	# taken starts with the nitro bottles so a pack never shares their slot
-	var taken := _pick_bottle_spots(NITRO_BOTTLE_COUNT).duplicate()
 	var rng := RandomNumberGenerator.new()
-	rng.seed = def.decor_seed ^ 0x3C0D
+	rng.seed = seed
 	var total := _arc[n - 1] + centerline[n - 1].distance_to(centerline[0])
 	var spots: Array[int] = []
 	for k in count:
@@ -870,29 +908,11 @@ func _pick_health_spots(count: int) -> Array[int]:
 	return spots
 
 
-## Even arc-length spread of sample indices for nitro bottles, kept off the start
-## straight and away from the boost pads. A small per-slot jitter (seeded) keeps
-## laps from feeling identical without clustering bottles together; if a slot is
-## blocked the nearest free neighbour is used instead.
-func _pick_bottle_spots(count: int) -> Array[int]:
-	var n := sample_count()
-	if n < 2:
-		return []
-	var pads := _pick_pad_spots(PAD_COUNT)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = def.decor_seed ^ 0x6F21
-	var total := _arc[n - 1] + centerline[n - 1].distance_to(centerline[0])
-	var spots: Array[int] = []
-	for k in count:
-		var target := total * (float(k) + 0.5) / float(count)
-		var i := 0
-		while i < n - 1 and _arc[i] < target:
-			i += 1
-		i = clampi(i + rng.randi_range(-3, 3), 60, n - 12)
-		var spot := _free_bottle_spot(i, pads, spots)
-		if spot >= 0:
-			spots.append(spot)
-	return spots
+func _pad_spots() -> Array[int]:
+	if not _pad_spots_ready:
+		_pad_spots_ready = true
+		_pad_spots_cache = _pick_pad_spots(PAD_COUNT)
+	return _pad_spots_cache
 
 
 ## Nearest sample to `start` that is a valid bottle spot: off the start straight,
@@ -1024,14 +1044,12 @@ func _make_decor() -> Node3D:
 
 	if def.urban_canyon:
 		root.add_child(_make_buildings(rng, occupied))
+		return root
 	if prop_texs.is_empty():
 		root.add_child(_make_primitive_vegetation(rng, biome))
 	else:
 		root.add_child(_make_sprite_vegetation(rng, prop_texs, occupied))
-	if not def.urban_canyon:
-		root.add_child(_make_buildings(rng, occupied))
-	if def.urban_canyon:
-		return root
+	root.add_child(_make_buildings(rng, occupied))
 
 	var facade := _load_tex(def.facade_albedo_path("a"))
 	var stand_mat := StandardMaterial3D.new()
@@ -1074,7 +1092,7 @@ func _place_decor(rng: RandomNumberGenerator, count: int, min_lateral: float,
 		var side := 1.0 if rng.randf() < 0.5 else -1.0
 		var p := centerline[idx] + side_vector(idx) * side * lateral
 		p.y = 0.0
-		if min_distance_to_track(p) < def.road_half_width + 3.5 + footprint_radius:
+		if min_distance_to_track(p) < def.road_half_width + ROAD_DECOR_MARGIN + footprint_radius:
 			continue
 		var clear := true
 		for q in occupied:
@@ -1123,7 +1141,8 @@ func _make_sprite_vegetation(rng: RandomNumberGenerator, prop_texs: Array[Textur
 func _make_buildings(rng: RandomNumberGenerator, occupied: Array[Vector3]) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Buildings"
-	if def.urban_canyon and _kit_available():
+	var use_kit := def.urban_canyon and _kit_available()
+	if use_kit:
 		root.add_child(_make_street_front(rng, occupied))
 	var spots: Array[Dictionary] = []
 	if def.urban_canyon:
@@ -1134,18 +1153,23 @@ func _make_buildings(rng: RandomNumberGenerator, occupied: Array[Vector3]) -> No
 				15.0)
 	if spots.is_empty():
 		return root
-	var mats := _make_facade_materials()
-	var concrete := _make_concrete_material()
-	if def.urban_canyon and _kit_available():
+	if use_kit:
 		for spot in spots:
 			var b := _make_kit_building(rng, spot)
 			if b != null:
 				root.add_child(b)
+		if def.skyline_count > 0:
+			var sky := Node3D.new()
+			sky.name = "Skyline"
+			root.add_child(sky)
+			_make_kit_skyline(rng, occupied, sky)
 	else:
+		var mats := _make_facade_materials()
+		var concrete := _make_concrete_material()
 		for spot in spots:
 			root.add_child(_make_building(rng, spot, mats, concrete))
-	if def.skyline_count > 0:
-		root.add_child(_make_skyline(rng, mats, occupied))
+		if def.skyline_count > 0:
+			root.add_child(_make_skyline(rng, mats, occupied))
 	return root
 
 
@@ -1166,7 +1190,7 @@ func _make_kit_building(rng: RandomNumberGenerator, spot: Dictionary) -> Node3D:
 		var id: String = BUILDING_KIT[rng.randi() % BUILDING_KIT.size()]
 		var root := _spawn_kit_building(rng, id, spot.pos,
 				tangent_yaw(int(spot.idx)) + rng.randf_range(-0.04, 0.04),
-				rng.randf_range(0.9, 1.25), float(spot.get("side", 1.0)))
+				rng.randf_range(0.9, 1.25), float(spot["side"]))
 		if root == null:
 			return _make_building(rng, spot, _make_facade_materials(), _make_concrete_material())
 		if _building_clear(root):
@@ -1264,8 +1288,6 @@ func _make_street_front_side(rng: RandomNumberGenerator, side: float,
 		for _attempt in 6:
 			var id: String = FRONT_ROW_KIT[rng.randi() % FRONT_ROW_KIT.size()]
 			var path := "%s/%s.glb" % [BUILDING_KIT_DIR, id]
-			if not ResourceLoader.exists(path):
-				continue
 			var s := rng.randf_range(FRONT_ROW_SCALE_MIN, FRONT_ROW_SCALE_MAX)
 			var aabb := _kit_aabb_for(path)
 			var along := maxf(aabb.size.z, 4.0) * s
@@ -1278,11 +1300,10 @@ func _make_street_front_side(rng: RandomNumberGenerator, side: float,
 			if placed_count % FRONT_ROW_TOWER_PERIOD == 3:
 				var tid: String = FRONT_ROW_TOWERS[(placed_count / FRONT_ROW_TOWER_PERIOD) % FRONT_ROW_TOWERS.size()]
 				var tpath := "%s/%s.glb" % [BUILDING_KIT_DIR, tid]
-				if ResourceLoader.exists(tpath):
-					id = tid
-					path = tpath
-					aabb = _kit_aabb_for(tpath)
-					s = along / maxf(aabb.size.z, 4.0)
+				id = tid
+				path = tpath
+				aabb = _kit_aabb_for(tpath)
+				s = along / maxf(aabb.size.z, 4.0)
 			var wide := maxf(aabb.size.x, 4.0) * s
 			along = maxf(aabb.size.z, 4.0) * s
 			var offset := side * (sidewalk_outer + setback + wide * 0.5)
@@ -1388,7 +1409,7 @@ func _place_city_buildings(rng: RandomNumberGenerator, count: int,
 				var lateral := rng.randf_range(min_lateral, max_lateral)
 				var p := centerline[candidate_idx] + side_vector(candidate_idx) * side * lateral
 				p.y = 0.0
-				if min_distance_to_track(p) < def.road_half_width + 3.5 + CITY_BUILDING_FOOTPRINT_RADIUS:
+				if min_distance_to_track(p) < def.road_half_width + ROAD_DECOR_MARGIN + CITY_BUILDING_FOOTPRINT_RADIUS:
 					continue
 				var clear := true
 				for q in occupied:
@@ -1407,8 +1428,6 @@ func _make_skyline(rng: RandomNumberGenerator, mats: Array[StandardMaterial3D],
 		occupied: Array[Vector3]) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Skyline"
-	if def.urban_canyon and _kit_available():
-		return _make_kit_skyline(rng, occupied, root)
 	var buckets: Dictionary = {}
 	for i in def.skyline_count:
 		var idx := int(round(float(i) / maxf(float(def.skyline_count), 1.0) * float(centerline.size()))) % centerline.size()
@@ -1418,7 +1437,7 @@ func _make_skyline(rng: RandomNumberGenerator, mats: Array[StandardMaterial3D],
 			var lateral := rng.randf_range(125.0, 235.0)
 			var p := centerline[idx] + side_vector(idx) * side * lateral
 			p.y = 0.0
-			if min_distance_to_track(p) < def.road_half_width + 3.5 + CITY_SKYLINE_FOOTPRINT_RADIUS:
+			if min_distance_to_track(p) < def.road_half_width + ROAD_DECOR_MARGIN + CITY_SKYLINE_FOOTPRINT_RADIUS:
 				continue
 			var clear := true
 			for q in occupied:
@@ -1469,7 +1488,7 @@ func _make_kit_skyline(rng: RandomNumberGenerator, occupied: Array[Vector3],
 		if packed == null:
 			continue
 		scenes.append(packed)
-		sizes.append(_kit_local_aabb(path, packed.instantiate()).size)
+		sizes.append(_kit_aabb_for(path).size)
 	if scenes.is_empty():
 		return root
 	for i in def.skyline_count:
@@ -1557,7 +1576,7 @@ func _make_building(rng: RandomNumberGenerator, spot: Dictionary,
 	var root := Node3D.new()
 	root.position = spot.pos
 	root.rotation.y = tangent_yaw(int(spot.idx)) + rng.randf_range(-0.04, 0.04)
-	var side := float(spot.get("side", 1.0 if rng.randf() < 0.5 else -1.0))
+	var side := float(spot["side"])
 	var mat := mats[rng.randi() % mats.size()]
 	var kind := rng.randi_range(0, 3)
 	var w: float
@@ -1769,7 +1788,6 @@ func _make_contact_shadow(size: float) -> MeshInstance3D:
 ## prop sprites yet).
 func _make_primitive_vegetation(rng: RandomNumberGenerator, biome: String) -> Node3D:
 	var root := Node3D.new()
-	var desert := biome == "desert"
 
 	var trunk_mesh := CylinderMesh.new()
 	trunk_mesh.top_radius = 0.28

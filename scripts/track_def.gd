@@ -2,7 +2,7 @@ class_name TrackDef
 extends Resource
 ## Data-driven track: centerline spline, road metrics and biome asset paths.
 ## Drop-in environment assets live under res://assets/environments/<biome>/
-## (see docs/assets.md). Defaults mirror the original track_builder.gd track.
+## (see docs/assets.md). Decor defaults mirror assets/data/tracks/city_01.tres.
 
 const DEFAULT_PATH := "res://assets/data/tracks/city_01.tres"
 
@@ -43,13 +43,13 @@ const DEFAULT_PATH := "res://assets/data/tracks/city_01.tres"
 
 @export_group("Decor")
 @export var decor_seed := 20260914
-@export var prop_count := 72
-@export var building_count := 14
-@export var prop_min_lateral := 12.0
-@export var prop_max_lateral := 46.0
-@export var building_min_lateral := 20.0
-@export var building_max_lateral := 52.0
-@export var building_min_gap := 24.0
+@export var prop_count := 44
+@export var building_count := 64
+@export var prop_min_lateral := 30.0
+@export var prop_max_lateral := 68.0
+@export var building_min_lateral := 48.0
+@export var building_max_lateral := 78.0
+@export var building_min_gap := 12.0
 @export var night_racing := false
 @export var wet_road := false
 @export var urban_canyon := false
@@ -99,10 +99,6 @@ func facade_night_albedo_path(suffix: String) -> String:
 
 func facade_normal_path(suffix: String) -> String:
 	return env_dir() + "/facade_%s_normal.png" % suffix
-
-
-func facade_orm_path(suffix: String) -> String:
-	return env_dir() + "/facade_%s_orm.png" % suffix
 
 
 func facade_emission_path(suffix: String) -> String:

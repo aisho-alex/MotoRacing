@@ -2,6 +2,8 @@ class_name Hud
 extends CanvasLayer
 ## In-game UI: lap counter, timers, speed, countdown and finish screen.
 
+const Ui := preload("res://scripts/ui_kit.gd")
+
 var _lap_label: Label
 var _pos_label: Label
 var _police_label: Label
@@ -16,31 +18,10 @@ var _center_big: Label
 var _center_sub: Label
 var _toast_label: Label
 var _record_lap := -1.0
-var _record_race := -1.0
 var _toast_time := 0.0
 
-static var _shared_font: Font = null
-static var _font_lookup_done := false
-
-
-## Racing font from assets/ui/fonts/ (ChakraPetch preferred); falls back to
-## the engine default while the folder is empty.
 static func _ui_font() -> Font:
-	if _font_lookup_done:
-		return _shared_font
-	_font_lookup_done = true
-	for font_name: String in ["ChakraPetch-Bold.ttf", "ChakraPetch-SemiBold.ttf", "ChakraPetch-Regular.ttf"]:
-		var p := "res://assets/ui/fonts/" + font_name
-		if ResourceLoader.exists(p):
-			_shared_font = load(p) as Font
-			return _shared_font
-	var dir := DirAccess.open("res://assets/ui/fonts")
-	if dir != null:
-		for f in dir.get_files():
-			if f.get_extension() in ["ttf", "otf"]:
-				_shared_font = load("res://assets/ui/fonts/" + f) as Font
-				break
-	return _shared_font
+	return Ui.font()
 
 
 func _ready() -> void:
@@ -133,8 +114,7 @@ func set_position(pos: int, total: int) -> void:
 
 
 func set_police(active: bool) -> void:
-	if _police_label != null:
-		_police_label.visible = active
+	_police_label.visible = active
 
 
 func update_race_info(cur: float, best: float, last: float) -> void:
@@ -146,17 +126,14 @@ func update_race_info(cur: float, best: float, last: float) -> void:
 	_last_label.text = "LAST %s" % fmt(last)
 
 
-## Saved records for the current track/tier, shown while no local lap exists yet.
-func set_record(record_lap: float, record_race: float) -> void:
+## Saved record lap for the current track/tier, shown while no local lap exists.
+func set_record(record_lap: float) -> void:
 	_record_lap = record_lap
-	_record_race = record_race
 
 
 ## Short-lived reward toast (near-miss), shown above the nitro gauge so it
 ## never covers the center of the screen. Fades out at the end of its life.
 func show_toast(text: String, color := Color.WHITE, sub := "", duration := 1.4) -> void:
-	if _toast_label == null:
-		return
 	var full := text if sub.is_empty() else "%s  %s" % [text, sub]
 	_toast_label.label_settings.font_color = color
 	_toast_label.text = full
@@ -167,10 +144,9 @@ func show_toast(text: String, color := Color.WHITE, sub := "", duration := 1.4) 
 func _process(delta: float) -> void:
 	if _toast_time > 0.0:
 		_toast_time = maxf(_toast_time - delta, 0.0)
-		if _toast_label != null:
-			_toast_label.modulate.a = clampf(_toast_time / 0.4, 0.0, 1.0)
-			if _toast_time <= 0.0:
-				_toast_label.text = ""
+		_toast_label.modulate.a = clampf(_toast_time / 0.4, 0.0, 1.0)
+		if _toast_time <= 0.0:
+			_toast_label.text = ""
 
 
 func set_speed(kmh: float) -> void:
@@ -182,17 +158,14 @@ func set_nitro(ratio: float, active: bool) -> void:
 
 
 func set_health(ratio: float) -> void:
-	if _health_bar == null:
-		return
 	var r := clampf(ratio, 0.0, 1.0)
 	_health_bar.value = r
-	if _health_fill != null:
-		if r > 0.5:
-			_health_fill.bg_color = Color(0.35, 0.82, 0.42)
-		elif r > 0.25:
-			_health_fill.bg_color = Color(0.95, 0.78, 0.25)
-		else:
-			_health_fill.bg_color = Color(0.92, 0.25, 0.22)
+	if r > 0.5:
+		_health_fill.bg_color = Color(0.35, 0.82, 0.42)
+	elif r > 0.25:
+		_health_fill.bg_color = Color(0.95, 0.78, 0.25)
+	else:
+		_health_fill.bg_color = Color(0.92, 0.25, 0.22)
 
 
 ## Big centered banner (wipeout / busted warnings).
@@ -219,12 +192,13 @@ func clear_center() -> void:
 	_center_sub.text = ""
 
 
-func show_finish(total: float, best: float, pos: int = 0, credits: int = 0, new_record: bool = false) -> void:
+func show_finish(total: float, best: float, pos: int = 0, total_racers: int = 4,
+		credits: int = 0, new_record: bool = false) -> void:
 	_center_big.label_settings.font_color = Color(1.0, 0.85, 0.25)
 	_center_big.text = "FINISH!"
 	var sub := "RACE TIME %s    BEST LAP %s\nPress R to restart — returning to menu" % [fmt(total), fmt(best)]
 	if pos > 0:
-		sub = "POSITION %d/%d\n%s" % [pos, 4, sub]
+		sub = "POSITION %d/%d\n%s" % [pos, total_racers, sub]
 	sub = "%s — %s\n%s" % [Game.track_name(), Game.tier_label(), sub]
 	if new_record:
 		sub = "NEW RECORD!\n%s" % sub
@@ -233,9 +207,9 @@ func show_finish(total: float, best: float, pos: int = 0, credits: int = 0, new_
 	_center_sub.text = sub
 
 
-func reset_race() -> void:
-	set_lap(1, 3)
-	set_position(1, 4)
+func reset_race(total_laps: int = 3, total_racers: int = 4) -> void:
+	set_lap(1, total_laps)
+	set_position(1, total_racers)
 	update_race_info(0.0, -1.0, -1.0)
 	set_speed(0.0)
 	set_nitro(1.0, false)
@@ -243,9 +217,8 @@ func reset_race() -> void:
 	set_police(false)
 	clear_center()
 	_toast_time = 0.0
-	if _toast_label != null:
-		_toast_label.text = ""
-		_toast_label.modulate.a = 0.0
+	_toast_label.text = ""
+	_toast_label.modulate.a = 0.0
 
 
 static func fmt(t: float) -> String:
@@ -257,13 +230,4 @@ static func fmt(t: float) -> String:
 
 
 func _make_label(text: String, font_size: int) -> Label:
-	var l := Label.new()
-	l.text = text
-	var ls := LabelSettings.new()
-	ls.font = _ui_font()
-	ls.font_size = font_size
-	ls.font_color = Color.WHITE
-	ls.outline_size = int(font_size / 4.0)
-	ls.outline_color = Color(0, 0, 0, 0.85)
-	l.label_settings = ls
-	return l
+	return Ui.label(text, font_size, Color.WHITE)

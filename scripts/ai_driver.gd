@@ -34,11 +34,11 @@ var _block_timer := 0.0
 var _detour_time := 0.0
 var _detour_side := 1.0
 var _center_hug := 0.0  # seconds of centerline preference after wall contact
-var _last_good_i := 0   # last sample where the bike had real speed
 var _stall_time := 0.0
 var _wrong_time := 0.0
 var _last_progress_i := 0
 var _teleport_cooldown := 0.0
+var _debug := false
 
 # diagnostics (see tools/ai_probe.gd)
 var teleports := 0
@@ -54,23 +54,17 @@ func _init(track_ref: TrackBuilder, skill_mult: float = 0.95, offset: float = 0.
 	track = track_ref
 	skill = clampf(skill_mult, 0.7, 1.0)
 	line_offset = offset
+	_debug = OS.get_environment("AI_DEBUG") != ""
 
 
 ## Full rescan of the nearest sample — call after any teleport (spawn, restart).
 func resync(bike: RaceBike) -> void:
-	var p := bike.global_position
-	var best := INF
-	for i in track.sample_count():
-		var d := track.centerline[i].distance_squared_to(p)
-		if d < best:
-			best = d
-			_nearest = i
+	_nearest = track.nearest_sample(bike.global_position)
 	_stuck_time = 0.0
 	_reverse_time = 0.0
 	_block_timer = 0.0
 	_detour_time = 0.0
 	_center_hug = 0.0
-	_last_good_i = _nearest
 	_stall_time = 0.0
 	_wrong_time = 0.0
 	_last_progress_i = _nearest
@@ -87,8 +81,6 @@ func drive(bike: RaceBike, delta: float) -> Vector3:
 	# Kept as an invisible last resort: 2s threshold, +8 samples, 3s cooldown.
 	if _teleport_cooldown > 0.0:
 		_teleport_cooldown -= delta
-	if vf > 5.0:
-		_last_good_i = _nearest
 	if _nearest != _last_progress_i:
 		_last_progress_i = _nearest
 		_stall_time = 0.0
@@ -138,9 +130,8 @@ func drive(bike: RaceBike, delta: float) -> Vector3:
 			return Vector3.ZERO
 		if vf > 1.0:
 			return Vector3(0.0, -1.0, false)  # brake before pivoting
-		return Vector3(clampf(_steer_to_offset(bike, line_offset, 30), -1.0, 1.0), 0.6, false)
+		return Vector3(_steer_to_offset(bike, line_offset, 30), 0.6, false)
 	_wrong_time = 0.0
-	_last_progress_i = _nearest
 
 	# pass a blocker that keeps us crawling (emergency) OR is much slower than
 	# our own pace (racing overtake, do not just sit behind it)
@@ -169,9 +160,9 @@ func drive(bike: RaceBike, delta: float) -> Vector3:
 		frames_detour += 1
 		_detour_time -= delta
 		if vf >= -0.5:
-			return Vector3(_steer_to_offset(bike, 2.8 * _detour_side), 1.0, false)
+			return Vector3(_steer_to_offset(bike, DETOUR_OFFSET * _detour_side), 1.0, false)
 		_reverse_time = maxf(_reverse_time, 0.7)
-		return Vector3(-_steer_to_offset(bike, 2.8 * _detour_side), -1.0, false)
+		return Vector3(-_steer_to_offset(bike, DETOUR_OFFSET * _detour_side), -1.0, false)
 
 	var eff_offset := line_offset
 	if _center_hug > 0.0:
@@ -198,8 +189,6 @@ func drive(bike: RaceBike, delta: float) -> Vector3:
 ## True when the bike blocking us ahead is clearly slower than our own pace,
 ## so we should overtake instead of matching its speed.
 func _blocker_much_slower(bike: RaceBike, avoid: Dictionary) -> bool:
-	if not avoid.has("blocker_speed"):
-		return false
 	var my_pace: float = bike.def.max_speed * skill * speed_mult
 	return my_pace - float(avoid["blocker_speed"]) > OVERTAKE_GAP
 
@@ -243,15 +232,7 @@ func ahead_samples(vf: float) -> int:
 
 
 func _track_nearest(bike: RaceBike) -> void:
-	var n := track.sample_count()
-	var pos := bike.global_position
-	var best := INF
-	for k in range(-10, 11):
-		var i := (_nearest + k + n) % n
-		var d := track.centerline[i].distance_squared_to(pos)
-		if d < best:
-			best = d
-			_nearest = i
+	_nearest = track.nearest_sample(bike.global_position, _nearest, 10)
 
 
 ## Bikes ahead IN OUR LANE slow us down and push the aim aside; ghosts in
@@ -319,9 +300,9 @@ func _steer_to_offset(bike: RaceBike, off: float, ahead: int = 6) -> float:
 	var local := bike.global_transform.basis.inverse() * to
 	var curvature := 2.0 * sin(atan2(local.x, -local.z)) / dist
 	var speed := absf(bike.velocity.dot(-bike.global_transform.basis.z))
-	var authority := bike.def.steer_rate \
-		* clampf(speed / 7.0, 0.1, 1.0) \
-		* (1.0 - 0.45 * clampf(speed / bike.def.max_speed, 0.0, 1.0))
+	# Same yaw-authority curve as the bike physics, with a small floor so the
+	# controller does not blow up at a standstill.
+	var authority: float = maxf(bike.def.steer_authority(speed), bike.def.steer_rate * 0.1)
 	return clampf(speed * curvature / maxf(authority, 0.05), -1.0, 1.0)
 
 
@@ -389,7 +370,7 @@ func _throttle(bike: RaceBike, vf: float, slow: float, lat: float = 0.0) -> floa
 	target_speed *= lerpf(0.15, 1.0, slow)
 	if absf(lat) > bike.road_half_width - 2.0:
 		target_speed *= 0.7  # near a wall: leave steering margin
-	if OS.get_environment("AI_DEBUG") != "" and bike.name == "AI2":
+	if _debug and bike.name == "AI2":
 		print("THR vf=", vf, " slow=", slow, " target=", target_speed,
 			" near=", _nearest, " bikes=", bikes.size())
 	if vf < target_speed:

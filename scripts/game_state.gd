@@ -43,13 +43,14 @@ func is_bike_unlocked(bike_id: String) -> bool:
 
 
 func lock_hint(bike_id: String) -> String:
+	var name := bike_def_by_id(bike_id).display_name
 	match bike_id:
 		"sport_01":
-			return "Sport 600 — finish a race to unlock"
+			return "%s — finish a race to unlock" % name
 		"cruiser_01":
-			return "Cruiser 900 — finish 2nd or better to unlock"
+			return "%s — finish 2nd or better to unlock" % name
 		"super_01":
-			return "Superbike 1100 — win a race to unlock"
+			return "%s — win a race to unlock" % name
 	return ""
 
 
@@ -116,9 +117,8 @@ func track_lock_hint(index: int) -> String:
 	return "%s — locked" % track_name_at(index)
 
 
-func tier_label(tier: int = -1) -> String:
-	var t := track_tier if tier < 0 else tier
-	return "LEVEL %d/%d" % [t + 1, BikeTuning.TRACK_TIERS]
+func tier_label() -> String:
+	return "LEVEL %d/%d" % [track_tier + 1, BikeTuning.TRACK_TIERS]
 
 
 ## --- Track records (best lap / full-race time per track + difficulty tier) ---
@@ -135,26 +135,22 @@ func best_race_at(track_index_ref: int, tier: int) -> float:
 
 ## Records a lap time; returns true when it beats the stored best. Persists.
 func record_lap(track_index_ref: int, tier: int, lap_time: float) -> bool:
-	if lap_time <= 0.0 or _record_key(track_index_ref, tier) == "":
-		return false
-	var rec := _record_at(track_index_ref, tier)
-	var prev := float(rec.get("lap", -1.0))
-	if prev > 0.0 and lap_time >= prev:
-		return false
-	rec["lap"] = lap_time
-	_store_record(track_index_ref, tier, rec)
-	return true
+	return _record_best(track_index_ref, tier, "lap", lap_time)
 
 
 ## Records a full-race time; returns true when it beats the stored best. Persists.
 func record_race(track_index_ref: int, tier: int, race_time: float) -> bool:
-	if race_time <= 0.0 or _record_key(track_index_ref, tier) == "":
+	return _record_best(track_index_ref, tier, "race", race_time)
+
+
+func _record_best(track_index_ref: int, tier: int, field: String, value: float) -> bool:
+	if value <= 0.0 or _record_key(track_index_ref, tier) == "":
 		return false
 	var rec := _record_at(track_index_ref, tier)
-	var prev := float(rec.get("race", -1.0))
-	if prev > 0.0 and race_time >= prev:
+	var prev := float(rec.get(field, -1.0))
+	if prev > 0.0 and value >= prev:
 		return false
-	rec["race"] = race_time
+	rec[field] = value
 	_store_record(track_index_ref, tier, rec)
 	return true
 
@@ -271,9 +267,9 @@ func can_afford_upgrade(bike_id: String, part: String) -> bool:
 func buy_upgrade(bike_id: String, part: String) -> bool:
 	if not is_bike_unlocked(bike_id):
 		return false
-	var price := upgrade_cost(bike_id, part)
-	if price < 0 or credits < price:
+	if not can_afford_upgrade(bike_id, part):
 		return false
+	var price := upgrade_cost(bike_id, part)
 	credits -= price
 	var levels := upgrade_levels(bike_id)
 	levels[part] = int(levels[part]) + 1

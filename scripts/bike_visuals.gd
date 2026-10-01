@@ -8,29 +8,31 @@ extends RefCounted
 const WHEELBASE := 1.46
 const HEADLIGHT := Color(1.0, 0.96, 0.80)
 
-## Per-style proportions. z is +/- the track direction (-Z is forward).
+## Per-style proportions. z is +/- the track direction (-Z is forward). The
+## handlebar/peg points live in Rider.RIDER_STYLES (the same values the rider's
+## IK reaches for), so the mesh always sits under the hands and feet.
 const STYLES := {
 	"scrambler": {
 		"wheel_r": 0.35, "rear_w": 0.13, "seat_h": 0.84, "tank": Vector3(0.32, 0.26, 0.56),
-		"bar_h": 1.28, "bar_z": -0.42, "fairing": false, "screen": false, "rear_wide": 1.0,
+		"fairing": false, "screen": false, "rear_wide": 1.0,
 	},
 	"sport": {
 		"wheel_r": 0.32, "rear_w": 0.16, "seat_h": 0.86, "tank": Vector3(0.36, 0.24, 0.60),
-		"bar_h": 1.18, "bar_z": -0.52, "fairing": true, "screen": true, "rear_wide": 1.3,
+		"fairing": true, "screen": true, "rear_wide": 1.3,
 	},
 	"cruiser": {
 		"wheel_r": 0.33, "rear_w": 0.15, "seat_h": 0.74, "tank": Vector3(0.38, 0.28, 0.66),
-		"bar_h": 1.14, "bar_z": -0.50, "fairing": false, "screen": false, "rear_wide": 1.1,
+		"fairing": false, "screen": false, "rear_wide": 1.1,
 	},
 	"super": {
 		"wheel_r": 0.33, "rear_w": 0.20, "seat_h": 0.84, "tank": Vector3(0.40, 0.26, 0.64),
-		"bar_h": 1.16, "bar_z": -0.54, "fairing": true, "screen": true, "rear_wide": 1.6,
+		"fairing": true, "screen": true, "rear_wide": 1.6,
 	},
 }
 
 
-## Returns a "Model" holder with the bike and rider. Empty when the style is
-## unknown (falls back to "sport").
+## Returns a "Model" holder with the bike and rider. Unknown styles fall back
+## to "sport".
 static func build(def: BikeDef) -> Node3D:
 	var cfg: Dictionary = STYLES.get(def.style, STYLES["sport"])
 	var holder := Node3D.new()
@@ -44,6 +46,23 @@ static func build(def: BikeDef) -> Node3D:
 static func procedural_rider_mount(def: BikeDef) -> Vector3:
 	var cfg: Dictionary = STYLES.get(def.style, STYLES["sport"])
 	return Vector3(0.0, cfg["seat_h"] + 0.06, 0.14)
+
+
+## Handlebar grip / footpeg points in bike-local space. BikeDef overrides win;
+## otherwise the per-style values from the rider's IK table are used, so the
+## procedural mesh and the riding pose always agree.
+static func grip_local(def: BikeDef) -> Vector3:
+	if def.handlebar_local != Vector3.ZERO:
+		return def.handlebar_local
+	var cfg: Dictionary = Rider.RIDER_STYLES.get(def.style, Rider.RIDER_STYLES["sport"])
+	return cfg["grip"]
+
+
+static func peg_local(def: BikeDef) -> Vector3:
+	if def.peg_local != Vector3.ZERO:
+		return def.peg_local
+	var cfg: Dictionary = Rider.RIDER_STYLES.get(def.style, Rider.RIDER_STYLES["sport"])
+	return cfg["peg"]
 
 
 static func _build_wheels(holder: Node3D, def: BikeDef, cfg: Dictionary) -> void:
@@ -145,6 +164,7 @@ static func _build_body(holder: Node3D, def: BikeDef, cfg: Dictionary) -> void:
 	holder.add_child(rm)
 
 	# handlebar
+	var grip := grip_local(def)
 	var bar := CylinderMesh.new()
 	bar.top_radius = 0.022
 	bar.bottom_radius = 0.022
@@ -153,7 +173,7 @@ static func _build_body(holder: Node3D, def: BikeDef, cfg: Dictionary) -> void:
 	bar.material = chrome
 	var bm := MeshInstance3D.new()
 	bm.mesh = bar
-	bm.position = Vector3(0.0, cfg["bar_h"], cfg["bar_z"])
+	bm.position = Vector3(0.0, grip.y, grip.z)
 	bm.basis = Basis(Vector3(0.0, 0.0, 1.0), PI * 0.5)
 	holder.add_child(bm)
 
@@ -166,7 +186,7 @@ static func _build_body(holder: Node3D, def: BikeDef, cfg: Dictionary) -> void:
 		scr.material = _mat(Color(0.35, 0.45, 0.60), 0.15, 0.2)
 		var sm := MeshInstance3D.new()
 		sm.mesh = scr
-		sm.position = Vector3(0.0, cfg["bar_h"] + 0.12, cfg["bar_z"] - 0.04)
+		sm.position = Vector3(0.0, grip.y + 0.12, grip.z - 0.04)
 		holder.add_child(sm)
 
 	# headlight
@@ -190,16 +210,17 @@ static func _build_body(holder: Node3D, def: BikeDef, cfg: Dictionary) -> void:
 	_seg(holder, Vector3(0.16, r + 0.14, zr + 0.06), Vector3(0.20, r + 0.16, zr + 0.34), 0.055, chrome)
 
 	# footpegs
+	var peg := peg_local(def)
 	for s in [1.0, -1.0]:
-		var peg := CylinderMesh.new()
-		peg.top_radius = 0.02
-		peg.bottom_radius = 0.02
-		peg.height = 0.12
-		peg.radial_segments = 6
-		peg.material = chrome
+		var peg_mesh := CylinderMesh.new()
+		peg_mesh.top_radius = 0.02
+		peg_mesh.bottom_radius = 0.02
+		peg_mesh.height = 0.12
+		peg_mesh.radial_segments = 6
+		peg_mesh.material = chrome
 		var pm := MeshInstance3D.new()
-		pm.mesh = peg
-		pm.position = Vector3(s * 0.24, r + 0.06, 0.10)
+		pm.mesh = peg_mesh
+		pm.position = Vector3(s * peg.x, peg.y, peg.z)
 		pm.basis = Basis(Vector3(0.0, 0.0, 1.0), PI * 0.5)
 		holder.add_child(pm)
 

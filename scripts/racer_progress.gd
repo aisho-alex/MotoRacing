@@ -11,6 +11,7 @@ var laps := 0
 
 var _nearest := 0
 var _prog := 0.0
+var _passed_half := false
 
 
 func reset() -> void:
@@ -24,6 +25,7 @@ func reset() -> void:
 			best_i = i
 	_nearest = best_i
 	_prog = float(best_i) / float(track.sample_count())
+	_passed_half = false
 	laps = 0
 
 
@@ -44,10 +46,17 @@ func update() -> void:
 			best_i = i
 	_nearest = best_i
 	var new_prog := float(best_i) / float(n)
+	# Same anti-cut rule as LapTracker: a lap only counts if the rider actually
+	# passed the far half of the track, so teleports / corner cuts cannot farm it.
+	if new_prog > 0.4 and new_prog < 0.6:
+		_passed_half = true
 	if _prog > 0.8 and new_prog < 0.2:
-		laps += 1
+		if _passed_half:
+			laps += 1
+		_passed_half = false
 	elif _prog < 0.2 and new_prog > 0.8 and laps > 0:
 		laps -= 1
+		_passed_half = false
 	_prog = new_prog
 
 

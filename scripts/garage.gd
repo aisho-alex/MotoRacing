@@ -3,7 +3,8 @@ extends Control
 ## (arrows, Enter, Esc) and mouse both work. Locked bikes can be browsed but not
 ## upgraded. Up to three levels per part; stat bars preview the next level.
 
-const ACCENT := Color(1.0, 0.85, 0.25)
+const Ui := preload("res://scripts/ui_kit.gd")
+const ACCENT := Ui.ACCENT
 const DIM := Color(1, 1, 1, 0.45)
 const STAT_ROWS := [
 	{"part": "engine", "label": "SPEED", "prop": "max_speed"},
@@ -296,25 +297,8 @@ func _panel_style() -> StyleBoxFlat:
 
 
 func _label(text: String, size: int, color: Color) -> Label:
-	var l := Label.new()
-	l.text = text
-	var ls := LabelSettings.new()
-	ls.font = Hud._ui_font()
-	ls.font_size = size
-	ls.font_color = color
-	ls.outline_size = int(size / 4.0)
-	ls.outline_color = Color(0, 0, 0, 0.85)
-	l.label_settings = ls
-	return l
+	return Ui.label(text, size, color)
 
 
 func _button(text: String, size: int) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_override("font", Hud._ui_font())
-	b.add_theme_font_size_override("font_size", size)
-	b.add_theme_color_override("font_color", Color.WHITE)
-	b.add_theme_color_override("font_hover_color", ACCENT)
-	b.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.25))
-	return b
+	return Ui.button(text, size)
