@@ -40,6 +40,7 @@ FLAT = ("flat vector emblem, bold clean shapes, solid pure black background, "
         "white ink only, no shading, no gradient, centered, high contrast")
 
 SPECS = {
+    "stock": "white minimalist winged shield emblem, racing team badge, " + FLAT,
     "flame": "white tribal flame tattoo design, aggressive motorcycle decal, " + FLAT,
     "checker": "white and black racing checkered flag pattern with a diagonal "
                "speed stripe, motorsport livery, pure black background, high contrast",

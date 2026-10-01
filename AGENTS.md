@@ -47,7 +47,8 @@
   SKIN, Tab — переключение панели). Цвета (suit/accent/helmet/glove/boot/visor)
   с alpha 0 наследуются от `BikeDef`; каталог `Game.SKIN_IDS`, цены
   `Game.SHOP_SKINS`, сейв — `selected_skin`/`owned_skins`. Скины `rose`/`gold`
-  открываются за боссов (`unlock_boss`). Декали-эмблемы (грудь + бока шлема) —
+  открываются за боссов (`unlock_boss`); у `stock` тоже есть эмблема (щит),
+  цвет берётся из акцента байка. Декали-эмблемы (грудь + бока шлема) —
   RGBA-текстуры `assets/skins/<id>/decal.png` (белый RGB + узор в альфе),
   тонируются `accent_color` (alpha-scissor материал). Генерация —
   `tools/assetgen/gen_rider_skins.py` через SwarmUI (Z-Image Turbo), проверка —

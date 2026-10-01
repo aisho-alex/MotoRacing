@@ -6,3 +6,4 @@
 script = ExtResource("1_skin")
 id = "stock"
 display_name = "Stock"
+decal_dir = "res://assets/skins/stock"
