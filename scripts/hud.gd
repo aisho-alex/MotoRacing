@@ -14,6 +14,7 @@ var _speed_label: Label
 var _nitro_gauge: NitroGauge
 var _health_bar: ProgressBar
 var _health_fill: StyleBoxFlat
+var _shield_label: Label
 var _center_big: Label
 var _center_sub: Label
 var _toast_label: Label
@@ -66,6 +67,10 @@ func _ready() -> void:
 	_health_fill.set_corner_radius_all(4)
 	_health_bar.add_theme_stylebox_override("fill", _health_fill)
 	speed_box.add_child(_health_bar)
+	_shield_label = _make_label("SHIELD", 22)
+	_shield_label.label_settings.font_color = Color(0.4, 0.85, 1.0)
+	_shield_label.visible = false
+	speed_box.add_child(_shield_label)
 	# Compact reward toast (near-miss) lives above the nitro gauge instead of
 	# dead center, so a payout never blocks the view of the road.
 	_toast_label = _make_label("", 30)
@@ -115,6 +120,10 @@ func set_position(pos: int, total: int) -> void:
 
 func set_police(active: bool) -> void:
 	_police_label.visible = active
+
+
+func set_shield(active: bool) -> void:
+	_shield_label.visible = active
 
 
 func update_race_info(cur: float, best: float, last: float) -> void:
@@ -215,6 +224,7 @@ func reset_race(total_laps: int = 3, total_racers: int = 4) -> void:
 	set_nitro(1.0, false)
 	set_health(1.0)
 	set_police(false)
+	set_shield(false)
 	clear_center()
 	_toast_time = 0.0
 	_toast_label.text = ""

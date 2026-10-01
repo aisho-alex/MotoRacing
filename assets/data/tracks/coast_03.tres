@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="TrackDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/track_def.gd" id="1_tdef"]
+
+[resource]
+script = ExtResource("1_tdef")
+id = "coast_03"
+display_name = "Coast III"
+biome = "coast"
+control_points = PackedVector3Array(301.4, 0, -109.55, 266.5, 0, -43.1, 231.6, 0, 23.34, 196.7, 0, 89.78, 161.8, 0, 156.23, 126.9, 0, 222.67, 56.64, 0, 242.79, -14.62, 0, 231.46, -78.99, 0, 211.96, -143.72, 0, 189.45, -201.86, 0, 148.1, -234.51, 0, 85.23, -244.23, 0, 16.68, -252.81, 0, -53.86, -257.74, 0, -136.82, -224.84, 0, -217.33, -142.25, 0, -249.6, -50.4, 0, -216.03, 10.43, 0, -165.12, 58.14, 0, -156.02, 136.61, 0, -180.07, 238.04, 0, -174.65)

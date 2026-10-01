@@ -25,6 +25,9 @@ const BIKE_COST_MULT := {
 	"sport_01": 1.2,
 	"cruiser_01": 1.5,
 	"super_01": 2.0,
+	"dirt_01": 1.1,
+	"chopper_01": 1.6,
+	"electric_01": 1.3,
 }
 
 ## Credits awarded for finishing a race, by position.

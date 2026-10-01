@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TrafficDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/traffic_def.gd" id="1_tdef"]
+
+[resource]
+script = ExtResource("1_tdef")
+id = "traffic_moto"
+display_name = "Moped"
+style = "scrambler"
+model_path = "res://assets/cars/traffic_moto/body.glb"
+model_yaw = 1.5707963
+rider_mount = Vector3(0, 0.78, 0.02)
+collision_size = Vector3(0.7, 1.1, 1.95)
+wheel_radius = 0.28
+speed_mult = 0.5
+weave_amp = 1.1
+weave_rate = 0.9
+nm_width = 2.4

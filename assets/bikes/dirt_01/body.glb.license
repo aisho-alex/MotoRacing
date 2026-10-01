@@ -1,0 +1,7 @@
+asset: assets/bikes/dirt_01/body.glb
+model: Yz250
+author: EmanuelRestrepoV (https://sketchfab.com/EmanuelRestrepoV)
+source: https://sketchfab.com/3d-models/127c9d767260468f821da3cba9d7db7e
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/centered pivot, wheel-node rename, PBR fixes, scaled to bike length (tools/assetgen/process_bike.py)
+date: 2026-10-01

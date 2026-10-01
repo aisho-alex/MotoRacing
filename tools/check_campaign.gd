@@ -28,6 +28,7 @@ func _process(_delta: float) -> bool:
 	failures += _check_ai_scale()
 	failures += _check_roundtrip(gs)
 	failures += _check_legacy_save()
+	failures += _check_bosses()
 	_restore(SAVE, backup)
 	print("RESULT: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(0 if failures == 0 else 1)
@@ -50,6 +51,8 @@ func _fresh() -> Node:
 	gs.track_tiers = {}
 	gs.track_index = 0
 	gs.track_tier = 0
+	gs.owned_bikes = []
+	gs.bosses_beaten = {}
 	return gs
 
 
@@ -159,6 +162,8 @@ func _check_roundtrip(gs: Node) -> int:
 	gs.unlocked_tracks = 2
 	gs.credits = 1234
 	gs.upgrades = {"scrambler_01": {"engine": 2, "tires": 0, "nitro": 1}}
+	gs.owned_bikes = ["boss_atlas"]
+	gs.bosses_beaten = {"canyon_01": true}
 	gs._save_progress()
 	var loaded := _new_game()
 	if loaded.unlocked_tracks != 2 or loaded.track_tier != 1 or loaded.credits != 1234:
@@ -169,6 +174,12 @@ func _check_roundtrip(gs: Node) -> int:
 		failures += 1
 	if loaded.unlocked_tier_count(0) != BikeTuning.TRACK_TIERS:
 		print("roundtrip lost track tiers")
+		failures += 1
+	if not ("boss_atlas" in loaded.owned_bikes):
+		print("roundtrip lost owned bikes")
+		failures += 1
+	if not loaded.boss_beaten("canyon_01"):
+		print("roundtrip lost beaten bosses")
 		failures += 1
 	return failures
 
@@ -189,6 +200,57 @@ func _check_legacy_save() -> int:
 		failures += 1
 	if loaded.credits != 900:
 		print("legacy save credits not loaded")
+		failures += 1
+	return failures
+
+
+func _check_bosses() -> int:
+	var failures := 0
+	var gs := _fresh()
+	for track_id in Bosses.DATA:
+		if not (track_id in gs.TRACK_IDS):
+			print("boss track missing from ladder: %s" % track_id)
+			failures += 1
+		var boss: Dictionary = Bosses.for_track(track_id)
+		var bike_id := String(boss["bike"])
+		if not ResourceLoader.exists("res://assets/data/bikes/%s.tres" % bike_id):
+			print("boss bike def missing: %s" % bike_id)
+			failures += 1
+		elif not gs.is_shop_bike(bike_id):
+			print("boss bike must be purchasable: %s" % bike_id)
+			failures += 1
+	if not Bosses.for_track("city_01").is_empty():
+		print("city_01 should not have a boss")
+		failures += 1
+	var boss: Dictionary = Bosses.for_track("canyon_01")
+	if boss.is_empty():
+		print("canyon_01 should have a boss")
+		return failures + 1
+	# one-time bonus
+	var bonus := int(boss["bonus"])
+	gs.credits = 0
+	if gs.beat_boss("canyon_01", bonus) != bonus or gs.credits != bonus:
+		print("boss bonus not awarded")
+		failures += 1
+	if gs.beat_boss("canyon_01", bonus) != 0 or gs.credits != bonus:
+		print("boss bonus must be one-time")
+		failures += 1
+	# shop bike purchase
+	var bike_id := String(boss["bike"])
+	var price: int = gs.bike_price(bike_id)
+	if price <= 0 or gs.is_bike_unlocked(bike_id):
+		print("shop bike should be locked and priced")
+		failures += 1
+	gs.credits = price - 1
+	if gs.buy_bike(bike_id):
+		print("buy_bike must fail when credits are short")
+		failures += 1
+	gs.credits = price
+	if not gs.buy_bike(bike_id) or not gs.is_bike_unlocked(bike_id) or gs.credits != 0:
+		print("buy_bike failed to purchase the bike")
+		failures += 1
+	if gs.buy_bike(bike_id):
+		print("buy_bike must not sell the same bike twice")
 		failures += 1
 	return failures
 

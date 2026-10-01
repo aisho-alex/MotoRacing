@@ -25,6 +25,7 @@ var bikes: Array = []  # all racers, for avoidance / combat
 var attack_side := 0.0           # set by decide_attack(): +1 right, -1 left
 var attack_kind := ""            # "punch" / "kick" / "" (none)
 var aggression := 0.45           # 0..1 chance to swing when an opponent is close
+var boss := false                # campaign boss: keeps a fixed pace (no rubber-band)
 var chase: Node3D = null         # police: ride the chased rider's line
 
 var _nearest := 0

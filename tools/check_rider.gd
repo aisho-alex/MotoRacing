@@ -21,7 +21,9 @@ func _process(_delta: float) -> bool:
 	BikeScript = load("res://scripts/race_bike.gd")
 	DefScript = load("res://scripts/bike_def.gd")
 	var failures := 0
-	var ids := ["scrambler_01", "sport_01", "cruiser_01", "super_01", "cop_01"]
+	var ids := ["scrambler_01", "sport_01", "cruiser_01", "super_01", "cop_01",
+		"dirt_01", "chopper_01", "electric_01",
+		"boss_atlas", "boss_kitsune", "boss_cinder"]
 	for id in ids:
 		failures += _check_bike(id)
 	print("RESULT: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))

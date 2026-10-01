@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="BikeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/bike_def.gd" id="1_bdef"]
+
+[resource]
+script = ExtResource("1_bdef")
+id = "chopper_01"
+display_name = "Chopper 1200"
+style = "cruiser"
+body_color = Color(0.08, 0.08, 0.09, 1)
+accent_color = Color(0.78, 0.16, 0.1, 1)
+rider_color = Color(0.09, 0.09, 0.11, 1)
+helmet_color = Color(0.1, 0.1, 0.12, 1)
+lean_max = 22.0
+model_path = "res://assets/bikes/chopper_01/body.glb"
+model_yaw = 3.1415926
+rider_mount = Vector3(0, 0.62, 0.06)
+collision_size = Vector3(0.95, 1.1, 2.45)
+wheel_radius = 0.35
+max_speed = 37.0
+accel = 14.5
+grip = 9.0
+offroad_grip = 2.4
+steer_rate = 1.75

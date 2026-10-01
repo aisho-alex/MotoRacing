@@ -159,8 +159,14 @@ func _part_row(index: int) -> HBoxContainer:
 func _refresh() -> void:
 	var id := _bike_id()
 	var unlocked := Game.is_bike_unlocked(id)
-	_bike_label.text = "%s%s" % [Game.bike_def_by_id(id).display_name, "" if unlocked else "  [LOCKED]"]
+	var for_sale := Game.is_shop_bike(id) and not unlocked
 	_credits_label.text = "%d CR" % Game.credits
+
+	var def_name := Game.bike_def_by_id(id).display_name
+	if for_sale:
+		_bike_label.text = "%s   [%d CR]" % [def_name, Game.bike_price(id)]
+	else:
+		_bike_label.text = "%s%s" % [def_name, "" if unlocked else "  [LOCKED]"]
 
 	var base := Game.bike_def_by_id(id)
 	var tuned := Game.tuned_def_for(id)
@@ -178,9 +184,26 @@ func _refresh() -> void:
 		widgets["value"].text = text
 
 	for i in BikeTuning.PARTS.size():
-		_refresh_part_row(i, id, unlocked)
+		if for_sale:
+			_refresh_shop_row(i, id)
+		else:
+			_refresh_part_row(i, id, unlocked)
 
-	_hint_label.text = _hint_text(unlocked)
+	_hint_label.text = _hint_text(unlocked, for_sale)
+
+
+## Shop bike rows double as the "buy the bike" button: they show the price
+## instead of upgrade levels until the machine is owned.
+func _refresh_shop_row(index: int, id: String) -> void:
+	var widgets: Dictionary = _part_rows[index]
+	var price := Game.bike_price(id)
+	widgets["name"].label_settings.font_color = ACCENT if index == part_pos else Color.WHITE
+	widgets["level"].text = "--"
+	widgets["pips"].value = 0
+	widgets["cost"].text = "%d CR" % price
+	widgets["cost"].label_settings.font_color = ACCENT if Game.credits >= price else DIM
+	widgets["buy"].text = "BUY BIKE"
+	widgets["buy"].disabled = Game.credits < price
 
 
 func _refresh_part_row(index: int, id: String, unlocked: bool) -> void:
@@ -215,7 +238,12 @@ func _preview_def(base: BikeDef, id: String, part: String) -> BikeDef:
 	return BikeTuning.apply(base, levels)
 
 
-func _hint_text(unlocked: bool) -> String:
+func _hint_text(unlocked: bool, for_sale: bool = false) -> String:
+	if for_sale:
+		var price := Game.bike_price(_bike_id())
+		if Game.credits >= price:
+			return "Enter: buy this bike for %d CR" % price
+		return "Need %d CR to buy this bike" % price
 	if not unlocked:
 		return Game.lock_hint(_bike_id())
 	return "Arrows: bike / upgrade    Enter: buy    Esc: menu"
@@ -238,6 +266,13 @@ func _buy_selected(index: int = -1) -> void:
 	if index >= 0:
 		part_pos = index
 	var id := _bike_id()
+	if Game.is_shop_bike(id) and not Game.is_bike_unlocked(id):
+		if Game.buy_bike(id):
+			Audio.play_ui("unlock")
+		else:
+			Audio.play_ui("click")
+		_refresh()
+		return
 	if not Game.is_bike_unlocked(id):
 		Audio.play_ui("click")
 		return

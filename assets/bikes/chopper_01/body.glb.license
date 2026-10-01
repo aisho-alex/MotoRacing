@@ -1,0 +1,7 @@
+asset: assets/bikes/chopper_01/body.glb
+model: night rod
+author: EmanuelRestrepoV (https://sketchfab.com/EmanuelRestrepoV)
+source: https://sketchfab.com/3d-models/e61fc30b0e2d4920bc2ba45127448204
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/centered pivot, wheel-node rename, PBR fixes, scaled to bike length (tools/assetgen/process_bike.py)
+date: 2026-10-01

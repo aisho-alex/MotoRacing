@@ -19,11 +19,17 @@ Honda CB 750 F Super Sport 1970 — Alex.Ka.
 Motorcycle Fallout — milinam2002
 HCR2 Superbike — oakar258
 Low Poly Motorcycle 001 — roh3d
+Yz250 — EmanuelRestrepoV
+night rod — EmanuelRestrepoV
+Piggo Electric - Motorbike — Rayzngames
+Yamaha 500 custom motorbike — Alexios_Apokauko
 Rider: procedural low-poly (built in-engine)
 
 [b]TRAFFIC CARS — Sketchfab, CC-BY 4.0[/b]
 Shvan '92 · Illinois '90 Taxi · Fairheaven SW '84 — DanielZhabotinsk
-BMW E46 1998 · BMW E30 1985 — roh3d
+BMW E46 1998 · BMW E30 1985 · De Tomaso P72 2020 — roh3d
+Moped, motorcycle. — lexpartizan
+City Bus (РоАЗ-5236) — grox777
 
 [b]CITY BUILDINGS[/b]
 NeonTown (bank, bar, pharmacy, restaurant, store) — bnishna · CC0 · OpenGameArt

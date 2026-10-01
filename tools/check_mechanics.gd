@@ -4,6 +4,8 @@ extends SceneTree
 ##   * health pickups: add_health heal + clamp, pickup amount
 ##   * slipstream: draft lock behind a rider, release when the target is gone
 ##   * near-miss: clean tight pass pays nitro, contact/wide passes do not, chain x2
+##   * shield pickup / oil slick: combat immunity + temporary grip loss
+##   * cash pickup (player-only credits) and traffic cone (speed-gated damage)
 ## and the pickup placement on every track (counts, no shared slots).
 ## The real progress.cfg is snapshotted and restored afterwards, because records
 ## are persisted through Game._save_progress().
@@ -18,6 +20,10 @@ var DefScript
 var TrafficScript
 var HealthScript
 var NitroScript
+var CashScript
+var ShieldScript
+var ConeScript
+var OilScript
 
 
 func _initialize() -> void:
@@ -33,6 +39,10 @@ func _process(_delta: float) -> bool:
 	TrafficScript = load("res://scripts/traffic.gd")
 	HealthScript = load("res://scripts/health_pickup.gd")
 	NitroScript = load("res://scripts/nitro_pickup.gd")
+	CashScript = load("res://scripts/cash_pickup.gd")
+	ShieldScript = load("res://scripts/shield_pickup.gd")
+	ConeScript = load("res://scripts/traffic_cone.gd")
+	OilScript = load("res://scripts/oil_slick.gd")
 	var backup := _read(SAVE)
 	var failures := 0
 	failures += _check_health_pickup()
@@ -40,6 +50,8 @@ func _process(_delta: float) -> bool:
 	failures += _check_draft()
 	failures += _check_near_miss()
 	failures += _check_records()
+	failures += _check_shield_and_oil()
+	failures += _check_cash_and_cone()
 	failures += _check_pickup_placement()
 	_restore(SAVE, backup)
 	print("RESULT: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
@@ -291,6 +303,89 @@ func _check_records() -> int:
 	return failures
 
 
+func _check_shield_and_oil() -> int:
+	var failures := 0
+	var b = _make_bike()
+	b.health = BikeScript.HEALTH_MAX
+	b.add_shield(5.0)
+	if not b.has_shield():
+		print("shield: pickup did not grant a shield")
+		failures += 1
+	b.take_hit(30.0, b.global_position + Vector3.RIGHT)
+	if not is_equal_approx(b.health, BikeScript.HEALTH_MAX):
+		print("shield: combat hit got through (%.1f)" % b.health)
+		failures += 1
+	b.shield_time = 0.0
+	b.take_hit(30.0, b.global_position + Vector3.RIGHT)
+	if b.health >= BikeScript.HEALTH_MAX:
+		print("shield: hit after expiry did no damage (%.1f)" % b.health)
+		failures += 1
+	b.apply_oil(3.0)
+	if not is_equal_approx(b._grip_multiplier(), float(BikeScript.OIL_GRIP_MULT)):
+		print("oil: grip not reduced (%.3f)" % b._grip_multiplier())
+		failures += 1
+	b.oil_time = 0.0
+	if not is_equal_approx(b._grip_multiplier(), 1.0):
+		print("oil: grip not restored after expiry")
+		failures += 1
+	b.queue_free()
+	return failures
+
+
+func _check_cash_and_cone() -> int:
+	var failures := 0
+	var game := root.get_node_or_null("/root/Game")
+	if game == null:
+		print("cash: Game autoload missing")
+		return failures + 1
+	# money bag: the player collects, an opponent does not
+	var cash = CashScript.new()
+	root.add_child(cash)
+	var player = _make_bike()
+	player.is_opponent = false
+	game.credits = 0
+	cash._on_body_entered(player)
+	if game.credits != int(CashScript.AMOUNT):
+		print("cash: player did not collect credits (%d)" % game.credits)
+		failures += 1
+	if cash._respawn <= 0.0:
+		print("cash: bag did not disappear after collection")
+		failures += 1
+	var cash2 = CashScript.new()
+	root.add_child(cash2)
+	var foe = _make_bike()  # is_opponent
+	game.credits = 0
+	cash2._on_body_entered(foe)
+	if game.credits != 0 or cash2._respawn > 0.0:
+		print("cash: opponent collected the bag")
+		failures += 1
+	# cone: a fast hit damages and knocks it away, a slow nudge does not
+	var cone = ConeScript.new()
+	root.add_child(cone)
+	var fast = _make_bike()
+	fast.health = BikeScript.HEALTH_MAX
+	fast.velocity = Vector3(0, 0, -15.0)
+	cone._on_body_entered(fast)
+	if fast.health >= BikeScript.HEALTH_MAX:
+		print("cone: fast hit did no damage")
+		failures += 1
+	if cone._respawn <= 0.0:
+		print("cone: cone was not knocked away")
+		failures += 1
+	var cone2 = ConeScript.new()
+	root.add_child(cone2)
+	var slow = _make_bike()
+	slow.health = BikeScript.HEALTH_MAX
+	slow.velocity = Vector3(0, 0, -2.0)
+	cone2._on_body_entered(slow)
+	if slow.health < BikeScript.HEALTH_MAX or cone2._respawn > 0.0:
+		print("cone: slow contact wrongly consumed the cone")
+		failures += 1
+	for n in [cash, cash2, cone, cone2, player, foe, fast, slow]:
+		n.queue_free()
+	return failures
+
+
 func _check_pickup_placement() -> int:
 	var failures := 0
 	for id in _discover_tracks():
@@ -309,6 +404,22 @@ func _check_pickup_placement() -> int:
 			failures += 1
 		if health == null or health.get_child_count() != int(track.HEALTH_PACK_COUNT):
 			print("%s: health pickup count wrong (%s)" % [id, "none" if health == null else str(health.get_child_count())])
+			failures += 1
+		var cash := track.find_child("CashPickups", true, false)
+		if cash == null or cash.get_child_count() != int(track.CASH_PICKUP_COUNT):
+			print("%s: cash pickup count wrong (%s)" % [id, "none" if cash == null else str(cash.get_child_count())])
+			failures += 1
+		var shield := track.find_child("ShieldPickups", true, false)
+		if shield == null or shield.get_child_count() != int(track.SHIELD_PICKUP_COUNT):
+			print("%s: shield pickup count wrong (%s)" % [id, "none" if shield == null else str(shield.get_child_count())])
+			failures += 1
+		var cones := track.find_child("TrafficCones", true, false)
+		if cones == null or cones.get_child_count() != int(track.CONE_COUNT):
+			print("%s: cone count wrong (%s)" % [id, "none" if cones == null else str(cones.get_child_count())])
+			failures += 1
+		var oil := track.find_child("OilSlicks", true, false)
+		if oil == null or oil.get_child_count() != int(track.OIL_SLICK_COUNT):
+			print("%s: oil slick count wrong (%s)" % [id, "none" if oil == null else str(oil.get_child_count())])
 			failures += 1
 		# no pack may share a nitro bottle slot (sampled flat position)
 		if nitro != null and health != null:

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="BikeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/bike_def.gd" id="1_bdef"]
+
+[resource]
+script = ExtResource("1_bdef")
+id = "dirt_01"
+display_name = "Dirt 450"
+style = "scrambler"
+body_color = Color(0.12, 0.34, 0.72, 1)
+accent_color = Color(0.9, 0.92, 0.95, 1)
+rider_color = Color(0.1, 0.16, 0.3, 1)
+helmet_color = Color(0.9, 0.92, 0.95, 1)
+lean_max = 32.0
+model_path = "res://assets/bikes/dirt_01/body.glb"
+model_yaw = 3.1415926
+rider_mount = Vector3(0, 0.92, 0.05)
+collision_size = Vector3(0.8, 1.1, 2.15)
+wheel_radius = 0.36
+max_speed = 32.0
+accel = 16.0
+grip = 7.6
+offroad_grip = 4.6
+steer_rate = 2.25

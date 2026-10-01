@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="TrafficDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/traffic_def.gd" id="1_tdef"]
+
+[resource]
+script = ExtResource("1_tdef")
+id = "traffic_sport"
+display_name = "Sports Car"
+style = "sport"
+model_path = "res://assets/cars/traffic_sport/body.glb"
+model_yaw = 3.1415926
+collision_size = Vector3(1.9, 1.0, 4.4)
+wheel_radius = 0.33
+speed_mult = 0.62
+nm_width = 3.0

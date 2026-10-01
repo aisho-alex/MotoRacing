@@ -36,7 +36,10 @@
 монтируется **процедурный райдер** (`scripts/rider.gd`) — он сохраняет
 перекраску по цвету соперника и рабочие позы удара/пинка/кувырка; посадка
 задаётся `BikeDef.rider_mount`/`rider_scale`. Ростер: `scrambler_01`,
-`sport_01`, `cruiser_01`, `super_01` + `cop_01` (`assets/data/bikes/*.tres`).
+`sport_01`, `cruiser_01`, `super_01`, `dirt_01`, `chopper_01`, `electric_01`,
+`cop_01` + байки боссов `boss_atlas`, `boss_kitsune`, `boss_cinder`
+(`assets/data/bikes/*.tres`). Байки боссов покупаются в гараже за кредиты
+(`Game.SHOP_BIKES`, `owned_bikes` в сейве); остальные открываются по прогрессу.
 
 | id | модель | автор | трис |
 |---|---|---|---|
@@ -44,7 +47,18 @@
 | sport_01 | Honda CB 750 F Super Sport 1970 | Alex.Ka. | ~37k |
 | cruiser_01 | Motorcycle Fallout | milinam2002 | ~20k |
 | super_01 | HCR2 Superbike | oakar258 | ~30k |
+| dirt_01 | Yz250 | EmanuelRestrepoV | ~22k |
+| chopper_01 | night rod | EmanuelRestrepoV | ~27k |
+| electric_01 | Piggo Electric - Motorbike | Rayzngames | ~30k |
 | cop_01 | Low Poly Motorcycle 001 | roh3d | ~5.5k |
+| boss_atlas | Yamaha 500 custom motorbike | Alexios_Apokauko | ~43k |
+| boss_kitsune | HCR2 Superbike (ливрея босса) | oakar258 | ~30k |
+| boss_cinder | night rod (ливрея босса) | EmanuelRestrepoV | ~27k |
+
+**Боссы кампании** (`scripts/bosses.gd`): на трассах `canyon_01`/`sakura_01`/
+`volcano_01` последний соперник заменяется именным боссом (skill 1.0, высокая
+агрессия, без резинки). Первая победа над боссом даёт разовый бонус кредитов
+(`Game.beat_boss`), его байк при этом уже доступен как покупка в гараже.
 
 `BikeDef.model_path` включает GLB-ветку (иначе — процедурный фолбэк
 `scripts/bike_visuals.gd`, если модель недоступна). Наклон в поворот и вилли
@@ -66,20 +80,27 @@ bounds, переименование колёс в `wheel_front`/`wheel_rear`, P
 подбирается `model_yaw` из отчёта `normalize_bike.py` (forward=…). Проверка:
 `tools/bike_close_shot.gd` (BIKE=0..3, NODE=Police, POSE=punch|kick|crash).
 
-### Трафик (5 автомобилей)
+### Трафик (8 машин)
 
 Источник: **Sketchfab, CC-BY 4.0**. Атрибуция — экран CREDITS в меню +
 `body.glb.license`. Модели лежат в `assets/cars/traffic_*/body.glb`, def-ы — в
-`assets/data/traffic/traffic_*.tres` (класс `BikeDef`, используется `model_path`
-и габариты; спавн — `scripts/traffic.gd`).
+`assets/data/traffic/traffic_*.tres` (класс `BikeDef`, для типов с особой
+повадкой — `TrafficDef` со `speed_mult`/`weave_amp`/`nm_width`; спавн —
+`scripts/traffic.gd`).
 
-| id | модель | автор |
-|---|---|---|
-| traffic_sedan | BMW E46 1998 | roh3d |
-| traffic_van | Shvan '92 (VW T4) | DanielZhabotinsk |
-| traffic_taxi | Illinois '90 Taxi | DanielZhabotinsk |
-| traffic_wagon1 | BMW E30 1985 | roh3d |
-| traffic_wagon2 | Fairheaven SW '84 | DanielZhabotinsk |
+| id | модель | автор | повадка |
+|---|---|---|---|
+| traffic_sedan | BMW E46 1998 | roh3d | обычная |
+| traffic_van | Shvan '92 (VW T4) | DanielZhabotinsk | обычная |
+| traffic_taxi | Illinois '90 Taxi | DanielZhabotinsk | обычная |
+| traffic_wagon1 | BMW E30 1985 | roh3d | обычная |
+| traffic_wagon2 | Fairheaven SW '84 | DanielZhabotinsk | обычная |
+| traffic_moto | Moped, motorcycle. | lexpartizan | быстрый, виляет по полосе (weave) |
+| traffic_sport | Low Poly Car - De Tomaso P72 2020 | roh3d | быстрый агрессивный |
+| traffic_bus | City Bus - rigged (РоАЗ-5236) | grox777 | широкий медленный блокер |
+
+Узкий трафик (мотоциклы) получает процедурного райдера, авто/автобус —
+нет (`race_bike.gd`, порог по `collision_size.x`).
 
 Пайплайн GLB-моделей (трафик/будущие): `sf_search.py`/`sf_download.py` (токен в
 `/tmp/opencode/sketchfab_token`, в репо не хранится) → `process_car.py`

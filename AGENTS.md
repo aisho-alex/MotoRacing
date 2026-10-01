@@ -35,7 +35,11 @@
   выпад), крэш — кувырок с разлётом. Скриншоты поз — `tools/rider_shot.gd`
   (`xvfb-run`, env `BIKE`, `POSE=idle|punch|kick|crash`, `AZ`, `ELEV`, `DIST`);
   headless-проверка рига/IK — `tools/check_rider.gd` (PASS).
-- Ростер: `scrambler_01`, `sport_01`, `cruiser_01`, `super_01`, коп `cop_01`.
+- Ростер: `scrambler_01`, `sport_01`, `cruiser_01`, `super_01`, `dirt_01`,
+  `chopper_01`, `electric_01`, коп `cop_01`, байки боссов `boss_atlas`,
+  `boss_kitsune`, `boss_cinder`. Первые три босс-байка — покупка в гараже
+  (`Game.SHOP_BIKES`, кредиты; `owned_bikes` в сейве), остальные — за прогресс
+  лестницы.
   Наклон/вилли — узел `Tilt` (bike-space), `BikeDef.lean_max`. Колёса
   крутятся, если у GLB есть ноды `wheel`/`tyre` (иначе статичны).
 - Бой (Road Rash): Q/E — удар влево/вправо, F — пинок; здоровье в HUD,
@@ -56,17 +60,31 @@
   (`AiDriver._blocker_much_slower`), мщение атакующему 4 с (`grudge`).
 - Полиция (`scripts/police.gd`): коп появляется с задержкой (`POLICE_DELAY` env
   для теста) и преследует игрока; при скорости <6 м/с рядом с копом 2.5 с —
-  BUSTED. Сбитый коп даёт бонус. Трафик (`scripts/traffic.gd`): 5 GLB-машин из
-  `assets/data/traffic/` едут по полосам; быстрый удар = вайпаут.
+  BUSTED. Сбитый коп даёт бонус. Трафик (`scripts/traffic.gd`): 8 GLB-машин из
+  `assets/data/traffic/` едут по полосам (обычные + `traffic_moto` быстрый и
+  виляет, `traffic_sport` быстрый, `traffic_bus` широкий медленный; повадки —
+  `TrafficDef.speed_mult`/`weave_amp`/`nm_width`); быстрый удар = вайпаут.
   У каждой машины `model_yaw` в `assets/data/traffic/*.tres` должен разворачивать
   нос модели в −Z (иначе машина «едет боком»): проверка
   `tools/check_traffic_orient.gd` (PASS/FAIL), рендер-контроль —
   `tools/car_orient_shot.gd` (через `xvfb-run`, `CAR_ID=<id>` для одной модели).
-- Проверки баланса/магазина/кампании/боя (должны быть PASS):
+- Пикапы/опасности (`scripts/track_pickup.gd` и наследники; спавн —
+  `track_builder.gd`, детерминированно по `decor_seed`): нитро, аптечка,
+  деньги (`CashPickup` — только игрок, +кредиты), щит (`ShieldPickup` — 8 с
+  иммунитета к ударам), масло (`OilSlick` — грип ×0.32 на 3.5 с), конус
+  (`TrafficCone` — 5 урона на скорости >6 м/с). HUD: индикатор `SHIELD`.
+- Боссы (`scripts/bosses.gd`): на `canyon_01`/`sakura_01`/`volcano_01` быстрый
+  слот соперника заменяется именным боссом (skill 1.0, высокая агрессия, без
+  резинки). Первая победа даёт разовый бонус кредитов (`Game.beat_boss`).
+  Байки боссов (`boss_atlas`/`boss_kitsune`/`boss_cinder`) покупаются в гараже
+  за кредиты (`Game.SHOP_BIKES`, `Game.buy_bike`, `owned_bikes` в сейве).
+- Проверки баланса/магазина/кампании/боя/механик (должны быть PASS):
   `tools/check_tuning.gd`, `tools/check_shop.gd`, `tools/check_campaign.gd`,
-  `tools/check_combat.gd`.
+  `tools/check_combat.gd`, `tools/check_mechanics.gd`, `tools/check_rider.gd`,
+  `tools/check_traffic_orient.gd`, `tools/check_buildings.gd`.
 - Скриншот байка крупным планом: `tools/bike_close_shot.gd` (через `xvfb-run`;
-  POSE=punch|kick|crash для боевых поз).
+  POSE=punch|kick|crash для боевых поз). Превью трасс/гаража — `tools/gen_track.gd`,
+  `tools/preview_shot.gd` (`SHOT=menu|race|garage`).
 
 ## Трассы
 

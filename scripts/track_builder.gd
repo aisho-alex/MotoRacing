@@ -22,6 +22,11 @@ const NITRO_BOTTLE_COUNT := 8
 ## Repair packs ("аптечки"): fewer than nitro bottles, so healing is a real
 ## decision rather than a constant stream.
 const HEALTH_PACK_COUNT := 5
+## Money bags (player-only credits), shield cells, oil slicks and road cones.
+const CASH_PICKUP_COUNT := 3
+const SHIELD_PICKUP_COUNT := 2
+const OIL_SLICK_COUNT := 4
+const CONE_COUNT := 5
 ## Keep bottles this many samples away from a boost pad so both reads stay clean.
 const NITRO_PICKUP_AVOID_PAD := 26
 ## Curb kit (Kenney "City Kit (Roads)", CC0): one 1 m one-sided curb segment
@@ -132,6 +137,10 @@ func build() -> void:
 	add_child(_make_boost_pads())
 	add_child(_make_nitro_pickups())
 	add_child(_make_health_pickups())
+	add_child(_make_cash_pickups())
+	add_child(_make_shield_pickups())
+	add_child(_make_oil_slicks())
+	add_child(_make_cones())
 	if def.wet_road:
 		add_child(_make_reflection_probes())
 
@@ -872,6 +881,36 @@ func _make_health_pickups() -> Node3D:
 			_pick_health_spots(HEALTH_PACK_COUNT), def.decor_seed ^ 0x5C11)
 
 
+func _make_cash_pickups() -> Node3D:
+	return _make_pickups("CashPickups", CashPickup, "CashBag",
+			_pick_cash_spots(CASH_PICKUP_COUNT), def.decor_seed ^ 0x11A3)
+
+
+func _make_shield_pickups() -> Node3D:
+	return _make_pickups("ShieldPickups", ShieldPickup, "ShieldCell",
+			_pick_shield_spots(SHIELD_PICKUP_COUNT), def.decor_seed ^ 0x63B1)
+
+
+## Oil slicks are a persistent on-road hazard (no collect/respawn); their dark
+## discs sit inside the road width at seeded arc-length spots.
+func _make_oil_slicks() -> Node3D:
+	var root := Node3D.new()
+	root.name = "OilSlicks"
+	var rng := RandomNumberGenerator.new()
+	rng.seed = def.decor_seed ^ 0x4D21
+	var max_offset := maxf(def.road_half_width - 2.4, 0.0)
+	for idx in _pick_oil_spots(OIL_SLICK_COUNT):
+		var oil := OilSlick.new()
+		oil.position = centerline[idx] + side_vector(idx) * rng.randf_range(-1.0, 1.0) * max_offset + Vector3.UP * ROAD_Y
+		root.add_child(oil)
+	return root
+
+
+func _make_cones() -> Node3D:
+	return _make_pickups("TrafficCones", TrafficCone, "Cone",
+			_pick_cone_spots(CONE_COUNT), def.decor_seed ^ 0x1F0D)
+
+
 ## Even arc-length spread of sample indices for nitro bottles, kept off the start
 ## straight and away from the boost pads. A small per-slot jitter (seeded) keeps
 ## laps from feeling identical without clustering bottles together; if a slot is
@@ -884,6 +923,36 @@ func _pick_health_spots(count: int) -> Array[int]:
 	# taken starts with the nitro bottles so a pack never shares their slot
 	var taken := _pick_bottle_spots(NITRO_BOTTLE_COUNT).duplicate()
 	return _pick_spread_spots(count, def.decor_seed ^ 0x3C0D, taken, _pad_spots())
+
+
+func _pick_cash_spots(count: int) -> Array[int]:
+	var taken := _pick_bottle_spots(NITRO_BOTTLE_COUNT).duplicate()
+	taken.append_array(_pick_health_spots(HEALTH_PACK_COUNT))
+	return _pick_spread_spots(count, def.decor_seed ^ 0x2C47, taken, _pad_spots())
+
+
+func _pick_shield_spots(count: int) -> Array[int]:
+	var taken := _pick_bottle_spots(NITRO_BOTTLE_COUNT).duplicate()
+	taken.append_array(_pick_health_spots(HEALTH_PACK_COUNT))
+	taken.append_array(_pick_cash_spots(CASH_PICKUP_COUNT))
+	return _pick_spread_spots(count, def.decor_seed ^ 0x7E19, taken, _pad_spots())
+
+
+func _pick_oil_spots(count: int) -> Array[int]:
+	var taken := _pick_bottle_spots(NITRO_BOTTLE_COUNT).duplicate()
+	taken.append_array(_pick_health_spots(HEALTH_PACK_COUNT))
+	taken.append_array(_pick_cash_spots(CASH_PICKUP_COUNT))
+	taken.append_array(_pick_shield_spots(SHIELD_PICKUP_COUNT))
+	return _pick_spread_spots(count, def.decor_seed ^ 0x4D21, taken, _pad_spots())
+
+
+func _pick_cone_spots(count: int) -> Array[int]:
+	var taken := _pick_bottle_spots(NITRO_BOTTLE_COUNT).duplicate()
+	taken.append_array(_pick_health_spots(HEALTH_PACK_COUNT))
+	taken.append_array(_pick_cash_spots(CASH_PICKUP_COUNT))
+	taken.append_array(_pick_shield_spots(SHIELD_PICKUP_COUNT))
+	taken.append_array(_pick_oil_spots(OIL_SLICK_COUNT))
+	return _pick_spread_spots(count, def.decor_seed ^ 0x1F0D, taken, _pad_spots())
 
 
 func _pick_spread_spots(count: int, seed: int, taken: Array[int],
@@ -919,9 +988,9 @@ func _pad_spots() -> Array[int]:
 ## on the road, clear of every boost pad and not already used.
 func _free_bottle_spot(start: int, pads: Array[int], taken: Array[int]) -> int:
 	var n := sample_count()
-	for step in 14:
+	for step in 40:
 		for dir in ([1, -1] if step > 0 else [1]):
-			var i := clampi(start + dir * step * 6, 60, n - 12)
+			var i := clampi(start + dir * step * 4, 60, n - 12)
 			if taken.has(i):
 				continue
 			var blocked := false
@@ -937,7 +1006,7 @@ func _free_bottle_spot(start: int, pads: Array[int], taken: Array[int]) -> int:
 
 ## Restores every collected pickup (called on race restart).
 func reset_pickups() -> void:
-	for group_name in ["NitroPickups", "HealthPickups"]:
+	for group_name in ["NitroPickups", "HealthPickups", "CashPickups", "ShieldPickups", "TrafficCones"]:
 		var root := get_node_or_null(group_name)
 		if root == null:
 			continue

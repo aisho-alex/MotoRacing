@@ -39,6 +39,8 @@ func _ready() -> void:
 	track.def = tdef
 	add_child(track)
 	track.build()
+	for pickup in track.find_children("*", "CashPickup", true, false):
+		pickup.collected.connect(_on_cash)
 
 	bike = RaceBike.new()
 	bike.name = "Bike"
@@ -70,6 +72,9 @@ func _ready() -> void:
 	hud.reset_race(LapTracker.TOTAL_LAPS, racers.size())
 	hud.set_record(Game.best_lap_at(Game.track_index, Game.track_tier))
 	hud.show_countdown(3)
+	var boss := Bosses.for_track(Game.TRACK_IDS[Game.track_index])
+	if not boss.is_empty():
+		hud.show_toast("BOSS RACE", Color(1.0, 0.6, 0.2), String(boss["name"]), 3.0)
 
 	bike.wiped_out.connect(_on_player_wipeout)
 	bike.remounted.connect(_on_player_remount)
@@ -95,13 +100,22 @@ func _ready() -> void:
 
 func _spawn_opponents() -> void:
 	var n := track.sample_count()
+	var boss := Bosses.for_track(Game.TRACK_IDS[Game.track_index])
+	# the boss takes over the fastest opponent slot
+	var boss_slot := OPPONENT_IDS.size() - 1 if not boss.is_empty() else -1
 	for k in OPPONENT_IDS.size():
-		var path := "res://assets/data/bikes/%s.tres" % OPPONENT_IDS[k]
+		var def_id: String = OPPONENT_IDS[k]
+		var skill: float = OPPONENT_SKILLS[k]
+		var is_boss := k == boss_slot
+		if is_boss:
+			def_id = String(boss["bike"])
+			skill = float(boss.get("skill", 1.0))
+		var path := "res://assets/data/bikes/%s.tres" % def_id
 		if not ResourceLoader.exists(path):
 			continue
 		var def := load(path) as BikeDef
 		var ai := RaceBike.new()
-		ai.name = "AI%d" % k
+		ai.name = "Boss" if is_boss else "AI%d" % k
 		ai.def = def
 		ai.night_lights = track.def.night_racing
 		ai.is_opponent = true
@@ -113,10 +127,13 @@ func _spawn_opponents() -> void:
 		var pos := track.centerline[idx] + side
 		var yaw := track.tangent_yaw(idx)
 		ai.reset_to(pos, yaw)
-		var driver := AiDriver.new(track, OPPONENT_SKILLS[k], OPPONENT_OFFSETS[k % OPPONENT_OFFSETS.size()])
-		driver.base_speed_mult = Game.ai_speed_scale()
+		var driver := AiDriver.new(track, skill, OPPONENT_OFFSETS[k % OPPONENT_OFFSETS.size()])
+		driver.boss = is_boss
+		driver.base_speed_mult = Game.ai_speed_scale() * (1.12 if is_boss else 1.0)
 		driver.speed_mult = driver.base_speed_mult
-		driver.aggression = clampf(0.35 + 0.40 * OPPONENT_SKILLS[k] + 0.05 * Game.track_tier, 0.2, 0.9)
+		driver.aggression = clampf(0.35 + 0.40 * skill + 0.05 * Game.track_tier, 0.2, 0.9)
+		if is_boss:
+			driver.aggression = float(boss.get("aggression", 0.9))
 		driver.resync(ai)
 		ai.driver = driver
 		racers.append(_racer_entry(ai, false, pos, yaw))
@@ -143,7 +160,7 @@ func _racer_entry(racer: RaceBike, is_player: bool, spawn_pos: Vector3, spawn_ya
 ## overriding the base campaign pace (BikeTuning.ai_speed_scale).
 func _apply_rubber_band(r: Dictionary, player_metric: float, delta: float) -> void:
 	var driver: AiDriver = r.bike.driver
-	if driver == null:
+	if driver == null or driver.boss:
 		return
 	var gap: float = player_metric - r.progress.progress_metric()  # >0 = AI behind
 	var target := driver.base_speed_mult + clampf(gap * RUBBER_GAIN, -0.08, 0.10)
@@ -206,6 +223,7 @@ func _process(delta: float) -> void:
 			_apply_rubber_band(r, player_metric, delta)
 	hud.set_position(_player_position(), racers.size())
 	hud.set_police(police.is_hunting())
+	hud.set_shield(bike.has_shield())
 	if Input.is_action_just_pressed("restart"):
 		_restart_race()
 
@@ -266,11 +284,18 @@ func _on_race_finished(total: float) -> void:
 	traffic.stop()
 	var pos := _player_position()
 	var earned := Game.record_result(true, pos)
+	var boss := Bosses.for_track(Game.TRACK_IDS[Game.track_index])
+	var boss_bonus := 0
+	if not boss.is_empty() and pos == 1:
+		boss_bonus = Game.beat_boss(Game.TRACK_IDS[Game.track_index], int(boss.get("bonus", 0)))
+		earned += boss_bonus
 	var new_lap := _lap_record_this_race
 	var new_race := Game.record_race(Game.track_index, Game.track_tier, total)
 	_burst_confetti()
 	Audio.play_ui("finish")
 	hud.show_finish(total, tracker.best_lap, pos, racers.size(), earned, new_lap or new_race)
+	if boss_bonus > 0:
+		hud.show_toast("BOSS BEATEN!", Color(1.0, 0.85, 0.25), "+%d CR BONUS" % boss_bonus, 3.0)
 	get_tree().create_timer(MENU_RETURN_DELAY).timeout.connect(_return_to_menu)
 
 
@@ -291,6 +316,11 @@ func _on_busted() -> void:
 func _on_cop_down(bonus: int) -> void:
 	Game.add_credits(bonus)
 	hud.show_message("COP DOWN!", Color(0.45, 0.85, 1.0), "+%d CREDITS" % bonus)
+
+
+## Money bag collected on the track: credits were added by the pickup already.
+func _on_cash(amount: int) -> void:
+	hud.show_toast("CASH!", Color(1.0, 0.85, 0.25), "+%d CR" % amount, 1.2)
 
 
 ## Clean pass by a traffic car: nitro reward, doubled on a 3-pass chain.

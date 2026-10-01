@@ -95,12 +95,18 @@ func _setup() -> void:
 	var scene_path := "res://scenes/main.tscn"
 	if shot == "menu":
 		scene_path = "res://scenes/menu.tscn"
+	elif shot == "garage":
+		scene_path = "res://scenes/garage.tscn"
 	else:
 		var game := root.get_node_or_null("/root/Game")
 		if game != null and OS.get_environment("TRACK") != "":
 			game.track_index = int(OS.get_environment("TRACK"))
 		if game != null and OS.get_environment("BIKE") != "":
 			game.bike_index = int(OS.get_environment("BIKE"))
+	if scene_path == "res://scenes/garage.tscn":
+		var game2 := root.get_node_or_null("/root/Game")
+		if game2 != null and OS.get_environment("BIKE") != "":
+			game2.bike_index = int(OS.get_environment("BIKE"))
 	var main := (load(scene_path) as PackedScene).instantiate()
 	root.add_child(main)
 	var start_index := OS.get_environment("START_INDEX")

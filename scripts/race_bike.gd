@@ -35,6 +35,8 @@ const DRAFT_MIN_SPEED := 10.0
 const DRAFT_MAX_MULT := 1.08
 const DRAFT_SPOOL := 2.0
 const DRAFT_REGEN_BONUS := 0.35
+## Lateral grip multiplier while riding over an oil slick.
+const OIL_GRIP_MULT := 0.32
 
 var def: BikeDef
 var road_half_width := 6.0
@@ -55,6 +57,9 @@ var _pad_boost_timer := 0.0
 var _draft_mult := 1.0
 var _drafting := false
 var _exhaust: Array[GPUParticles3D] = []
+
+var shield_time := 0.0   # seconds of immunity to combat hits (pickup)
+var oil_time := 0.0      # seconds of reduced lateral grip after an oil slick
 
 var _wheels: Array[Node3D] = []
 var _front_wheels: Array[Node3D] = []
@@ -157,6 +162,8 @@ func _physics_process(delta: float) -> void:
 
 	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
 	_crash_hurt_cooldown = maxf(_crash_hurt_cooldown - delta, 0.0)
+	shield_time = maxf(shield_time - delta, 0.0)
+	oil_time = maxf(oil_time - delta, 0.0)
 	grudge_timer = maxf(grudge_timer - delta, 0.0)
 	_wobble = move_toward(_wobble, 0.0, 6.0 * delta)
 	rotation.y += _wobble * delta
@@ -209,9 +216,9 @@ func _physics_process(delta: float) -> void:
 	_offroad_now = offroad
 	if offroad:
 		vf -= vf * def.offroad_drag * delta
-		vl *= exp(-def.offroad_grip * delta)
+		vl *= exp(-def.offroad_grip * _grip_multiplier() * delta)
 	else:
-		vl *= exp(-def.grip * delta)
+		vl *= exp(-def.grip * _grip_multiplier() * delta)
 
 	if is_on_floor():
 		var fn := get_floor_normal()
@@ -287,7 +294,7 @@ func _find_attack_target(side: float, kind: String) -> RaceBike:
 
 ## Damage from a hit; depleted health starts a wipeout.
 func take_hit(damage: float, from_pos: Vector3, from: RaceBike = null) -> void:
-	if wiped_out_now or not control_enabled:
+	if wiped_out_now or not control_enabled or shield_time > 0.0:
 		return
 	health = maxf(health - damage, 0.0)
 	var local: Vector3 = global_transform.basis.inverse() * (from_pos - global_position)
@@ -477,6 +484,36 @@ func add_health(amount: float) -> void:
 		Audio.play_at("ui/unlock", global_position, -3.0)
 
 
+## Called by a shield pickup: temporary immunity to combat hits (punches/kicks).
+## Crash damage from walls and traffic still applies.
+func add_shield(duration: float) -> void:
+	if not control_enabled:
+		return
+	shield_time = maxf(shield_time, duration)
+	if not is_opponent:
+		Audio.play_at("ui/unlock", global_position, -3.0)
+
+
+func has_shield() -> bool:
+	return shield_time > 0.0
+
+
+## True for the human rider's bike (not an AI opponent and not civilian traffic).
+func is_player_racer() -> bool:
+	return not is_opponent and not is_traffic
+
+
+## Called by an oil slick: temporarily loses lateral grip.
+func apply_oil(duration: float) -> void:
+	if not control_enabled:
+		return
+	oil_time = maxf(oil_time, duration)
+
+
+func _grip_multiplier() -> float:
+	return OIL_GRIP_MULT if oil_time > 0.0 else 1.0
+
+
 func _update_nitro(delta: float, request: bool) -> void:
 	if not control_enabled:
 		nitro = def.nitro_max
@@ -533,6 +570,8 @@ func reset_to(pos: Vector3, yaw: float) -> void:
 	global_position = pos + Vector3.UP * 0.6
 	rotation = Vector3(0.0, yaw, 0.0)
 	velocity = Vector3.ZERO
+	shield_time = 0.0
+	oil_time = 0.0
 
 
 func respawn() -> void:
@@ -619,16 +658,19 @@ func _build_visuals() -> void:
 		_tilt.add_child(holder)
 		_collect_wheels(holder)
 
-	# Seated procedural rider on top of either body.
-	var mount: Vector3 = def.rider_mount
-	if def.model_path == "":
-		mount = BikeVisuals.procedural_rider_mount(def)
-	rider = Rider.new()
-	rider.name = "Rider"
-	rider.position = mount
-	rider.scale = Vector3.ONE * def.rider_scale
-	rider.setup(def.rider_color, def.helmet_color, def)
-	_tilt.add_child(rider)
+	# Seated procedural rider on top of either body. Wide traffic (cars, buses)
+	# gets no rider — only two-wheeled traffic (motorcycles) does.
+	var two_wheeler := not is_traffic or def.collision_size.x < 1.3
+	if two_wheeler:
+		var mount: Vector3 = def.rider_mount
+		if def.model_path == "":
+			mount = BikeVisuals.procedural_rider_mount(def)
+		rider = Rider.new()
+		rider.name = "Rider"
+		rider.position = mount
+		rider.scale = Vector3.ONE * def.rider_scale
+		rider.setup(def.rider_color, def.helmet_color, def)
+		_tilt.add_child(rider)
 
 
 ## Wheels are any Node3D whose name contains "wheel"; front wheels are those

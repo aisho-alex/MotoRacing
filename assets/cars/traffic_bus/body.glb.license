@@ -1,0 +1,7 @@
+asset: assets/cars/traffic_bus/body.glb
+model: City Bus - rigged | РоАЗ-5236
+author: grox777 (https://sketchfab.com/grox777)
+source: https://sketchfab.com/3d-models/36646fcf41da498ca24a02f4b6fb1d95
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=512, grounded pivot at wheelbase center, corner-wheel rename, PBR fixes, scaled to length (tools/assetgen/process_car.py)
+date: 2026-10-01

@@ -1,0 +1,7 @@
+asset: assets/bikes/electric_01/body.glb
+model: Piggo Electric - Motorbike
+author: Rayzngames (https://sketchfab.com/Rayzngames)
+source: https://sketchfab.com/3d-models/10b9de37b8254611b1ccc3765759611f
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=1024, grounded/centered pivot, wheel-node rename, PBR fixes, scaled to bike length (tools/assetgen/process_bike.py)
+date: 2026-10-01

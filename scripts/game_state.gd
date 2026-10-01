@@ -1,7 +1,18 @@
 extends Node
 ## Autoload "Game": bike/track selection, savefile progression and unlocks.
 
-const BIKE_IDS := ["scrambler_01", "sport_01", "cruiser_01", "super_01"]
+const BIKE_IDS := [
+	"scrambler_01", "sport_01", "cruiser_01", "super_01",
+	"dirt_01", "chopper_01", "electric_01",
+	"boss_atlas", "boss_kitsune", "boss_cinder",
+]
+## Boss bikes are bought with credits in the garage (not progression-gated).
+## id -> price in credits.
+const SHOP_BIKES := {
+	"boss_atlas": 4000,
+	"boss_kitsune": 6000,
+	"boss_cinder": 8000,
+}
 ## Pre-motorcycle car ids, position-for-position with BIKE_IDS; used only to
 ## migrate an old savefile's upgrade levels.
 const LEGACY_CAR_IDS := ["compact_01", "sport_01", "muscle_01", "hyper_01"]
@@ -9,6 +20,7 @@ const TRACK_IDS := [
 	"city_01", "desert_01", "alpine_01", "coast_01",
 	"city_02", "desert_02", "alpine_02", "coast_02",
 	"canyon_01", "sakura_01", "volcano_01",
+	"canyon_02", "sakura_02", "volcano_02", "coast_03",
 ]
 const SAVE_PATH := "user://progress.cfg"
 
@@ -23,6 +35,8 @@ var upgrades := {}  # bike_id -> {engine, tires, nitro}
 var unlocked_tracks := 1  # ladder prefix: tracks [0, unlocked_tracks) are open
 var track_tiers := {}  # track_id -> number of unlocked difficulty tiers (1..3)
 var records := {}  # "track_id:tier" -> {"lap": best_lap, "race": best_race} (-1 = unset)
+var owned_bikes := []  # shop bike ids bought with credits
+var bosses_beaten := {}  # track_id -> true once the boss race was won
 
 
 func _ready() -> void:
@@ -30,8 +44,11 @@ func _ready() -> void:
 
 
 ## Unlocks: Scrambler is free; Sport after finishing any race; Cruiser after a
-## podium (2nd or better); Superbike after winning a race.
+## podium (2nd or better); Superbike after winning a race. The three extra
+## machines open as the ladder progresses (podiums unlock tracks).
 func is_bike_unlocked(bike_id: String) -> bool:
+	if SHOP_BIKES.has(bike_id):
+		return bike_id in owned_bikes
 	match bike_id:
 		"sport_01":
 			return races_done >= 1
@@ -39,11 +56,19 @@ func is_bike_unlocked(bike_id: String) -> bool:
 			return best_pos > 0 and best_pos <= 2
 		"super_01":
 			return best_pos == 1
+		"dirt_01":
+			return unlocked_tracks >= 3
+		"chopper_01":
+			return unlocked_tracks >= 6
+		"electric_01":
+			return unlocked_tracks >= 10
 	return true
 
 
 func lock_hint(bike_id: String) -> String:
 	var name := bike_def_by_id(bike_id).display_name
+	if SHOP_BIKES.has(bike_id):
+		return "%s — buy in the garage for %d CR" % [name, int(SHOP_BIKES[bike_id])]
 	match bike_id:
 		"sport_01":
 			return "%s — finish a race to unlock" % name
@@ -51,6 +76,12 @@ func lock_hint(bike_id: String) -> String:
 			return "%s — finish 2nd or better to unlock" % name
 		"super_01":
 			return "%s — win a race to unlock" % name
+		"dirt_01":
+			return "%s — reach track 3 to unlock" % name
+		"chopper_01":
+			return "%s — reach track 6 to unlock" % name
+		"electric_01":
+			return "%s — reach track 10 to unlock" % name
 	return ""
 
 
@@ -282,6 +313,49 @@ func total_upgrade_levels(bike_id: String) -> int:
 	return BikeTuning.total_levels(upgrade_levels(bike_id))
 
 
+## --- Shop bikes (boss machines bought with credits) ---
+
+func is_shop_bike(bike_id: String) -> bool:
+	return SHOP_BIKES.has(bike_id)
+
+
+## Price of a shop bike, or -1 for bikes that are not for sale.
+func bike_price(bike_id: String) -> int:
+	return int(SHOP_BIKES.get(bike_id, -1))
+
+
+func can_afford_bike(bike_id: String) -> bool:
+	var price := bike_price(bike_id)
+	return price >= 0 and credits >= price and not (bike_id in owned_bikes)
+
+
+## Buys a shop bike, deducting credits. Returns true on success.
+func buy_bike(bike_id: String) -> bool:
+	if not can_afford_bike(bike_id):
+		return false
+	credits -= int(SHOP_BIKES[bike_id])
+	owned_bikes.append(bike_id)
+	_save_progress()
+	return true
+
+
+## --- Bosses ---
+
+func boss_beaten(track_id: String) -> bool:
+	return bool(bosses_beaten.get(track_id, false))
+
+
+## Records a one-time boss victory and awards the bonus. Returns the credits
+## granted (0 when the track has no boss or it was already beaten).
+func beat_boss(track_id: String, bonus: int) -> int:
+	if track_id == "" or boss_beaten(track_id):
+		return 0
+	bosses_beaten[track_id] = true
+	credits += maxi(bonus, 0)
+	_save_progress()
+	return maxi(bonus, 0)
+
+
 ## Base def with the bike's upgrades applied — used for the player's bike only.
 func player_bike_def() -> BikeDef:
 	return tuned_def_for(current_bike_id())
@@ -340,6 +414,17 @@ func _load_progress() -> void:
 				}
 	track_index = clampi(track_index, 0, unlocked_tracks - 1)
 	track_tier = clampi(int(cfg.get_value("progress", "track_tier", 0)), 0, unlocked_tier_count(track_index) - 1)
+	owned_bikes = []
+	for v in cfg.get_value("progress", "owned_bikes", []):
+		var sid := String(v)
+		if SHOP_BIKES.has(sid) and not (sid in owned_bikes):
+			owned_bikes.append(sid)
+	bosses_beaten = {}
+	var saved_bosses: Variant = cfg.get_value("progress", "bosses_beaten", {})
+	if saved_bosses is Dictionary:
+		for k in (saved_bosses as Dictionary):
+			if bool((saved_bosses as Dictionary)[k]):
+				bosses_beaten[String(k)] = true
 
 
 func _save_progress() -> void:
@@ -351,6 +436,8 @@ func _save_progress() -> void:
 	cfg.set_value("progress", "track_index", track_index)
 	cfg.set_value("progress", "track_tier", track_tier)
 	cfg.set_value("progress", "unlocked_tracks", unlocked_tracks)
+	cfg.set_value("progress", "owned_bikes", owned_bikes)
+	cfg.set_value("progress", "bosses_beaten", bosses_beaten)
 	for id in BIKE_IDS:
 		cfg.set_value("upgrades", id, upgrade_levels(id))
 	for id in TRACK_IDS:

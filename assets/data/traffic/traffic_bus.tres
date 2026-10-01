@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="TrafficDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/traffic_def.gd" id="1_tdef"]
+
+[resource]
+script = ExtResource("1_tdef")
+id = "traffic_bus"
+display_name = "City Bus"
+model_path = "res://assets/cars/traffic_bus/body.glb"
+model_yaw = 0.0
+collision_size = Vector3(2.6, 1.8, 8.5)
+wheel_radius = 0.45
+speed_mult = 0.24
+nm_width = 4.4

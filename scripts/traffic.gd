@@ -10,7 +10,14 @@ extends Node
 
 signal near_miss(chain: int, reward: float)
 
-const DEF_IDS := ["traffic_sedan", "traffic_taxi", "traffic_van", "traffic_wagon1", "traffic_wagon2"]
+## Spawn pool: common cars appear twice, the niche types (weaving motorcycle,
+## fast sports car, wide bus) once, so the road stays varied but never a wall
+## of buses. The pool holds def ids and is sampled uniformly.
+const SPAWN_POOL := [
+	"traffic_sedan", "traffic_taxi", "traffic_van", "traffic_wagon1", "traffic_wagon2",
+	"traffic_sedan", "traffic_wagon1", "traffic_taxi",
+	"traffic_moto", "traffic_moto", "traffic_sport", "traffic_bus",
+]
 const COUNT := 10
 const SPAWN_MIN_AHEAD := 45.0
 const SPAWN_MAX_AHEAD := 230.0
@@ -33,9 +40,10 @@ var cars: Array = []
 var _rng := RandomNumberGenerator.new()
 var _active := false
 var _timer := 0.0
-var _nm := {}  # car -> {min_dist, contact, prev_z}
+var _nm := {}  # car -> {min_dist, contact, prev_z, lateral, hit}
 var _nm_chain := 0
 var _nm_chain_timer := 0.0
+var _weave_t := 0.0
 
 
 func setup(track_ref: TrackBuilder, player_ref: RaceBike) -> void:
@@ -68,10 +76,26 @@ func _process(delta: float) -> void:
 	if not _active:
 		return
 	_update_near_miss(delta)
+	_update_weave(delta)
 	_timer -= delta
 	if _timer <= 0.0:
 		_timer = 0.5
 		_maintain()
+
+
+## Weaving motorcycles drift side to side inside their lane; cars stay put.
+func _update_weave(delta: float) -> void:
+	_weave_t += delta
+	for c in cars:
+		if not is_instance_valid(c) or c.driver == null:
+			continue
+		var amp := float(c.get_meta("weave_amp", 0.0))
+		if amp <= 0.0:
+			continue
+		var base := float(c.get_meta("lane", 0.0))
+		var rate := float(c.get_meta("weave_rate", 1.0))
+		var phase := float(c.get_meta("weave_phase", 0.0))
+		c.driver.line_offset = base + sin(_weave_t * rate + phase) * amp
 
 
 func _maintain() -> void:
@@ -106,12 +130,15 @@ func _update_near_miss(delta: float) -> void:
 		if not is_instance_valid(c):
 			continue
 		var st: Dictionary = _nm.get(c, {})
+		if not st.has("lateral"):
+			st["lateral"] = float(c.get_meta("nm_width", NM_LATERAL))
+			st["contact"] = float(c.get_meta("nm_contact", NM_CONTACT))
 		var local: Vector3 = inv * (c.global_position - player.global_position)
 		var dist := Vector2(local.x, local.z).length()
 		if dist < NM_RANGE:
 			st["min_dist"] = minf(float(st.get("min_dist", INF)), dist)
-			if dist < NM_CONTACT:
-				st["contact"] = true
+			if dist < float(st.get("contact", NM_CONTACT)):
+				st["contacted"] = true
 		var prev_z := float(st.get("prev_z", local.z))
 		if prev_z <= 0.0 and local.z > 0.0:
 			_resolve_pass(st)
@@ -121,10 +148,12 @@ func _update_near_miss(delta: float) -> void:
 
 
 func _resolve_pass(st: Dictionary) -> void:
-	if bool(st.get("contact", false)):
+	if bool(st.get("contacted", false)):
 		return
 	var md := float(st.get("min_dist", INF))
-	if md < NM_CONTACT or md > NM_LATERAL:
+	var contact := float(st.get("contact", NM_CONTACT))
+	var lateral := float(st.get("lateral", NM_LATERAL))
+	if md < contact or md > lateral:
 		return
 	if player.velocity.length() < NM_MIN_PLAYER_SPEED:
 		return
@@ -146,7 +175,7 @@ func _spawn_one() -> bool:
 		var pos := track.centerline[idx] + track.side_vector(idx) * lane
 		if pos.distance_to(player.global_position) < SPAWN_MIN_AHEAD:
 			continue
-		var def_id: String = DEF_IDS[_rng.randi() % DEF_IDS.size()]
+		var def_id: String = SPAWN_POOL[_rng.randi() % SPAWN_POOL.size()]
 		var path := "res://assets/data/traffic/%s.tres" % def_id
 		if not ResourceLoader.exists(path):
 			continue
@@ -162,11 +191,28 @@ func _spawn_one() -> bool:
 		add_child(car)
 		car.reset_to(pos, track.tangent_yaw(idx))
 		var driver := AiDriver.new(track, 0.8, lane)
-		driver.speed_mult = SPEED_MULT
 		driver.aggression = 0.0
+		var speed_mult := SPEED_MULT
+		var weave_amp := 0.0
+		var weave_rate := 0.0
+		var nm_width := NM_LATERAL
+		var nm_contact := NM_CONTACT
+		if def is TrafficDef:
+			speed_mult = def.speed_mult
+			weave_amp = def.weave_amp
+			weave_rate = def.weave_rate
+			nm_width = def.nm_width
+			nm_contact = clampf(def.collision_size.x * 0.5 + 0.7, 1.3, 2.6)
+		driver.speed_mult = speed_mult
 		driver.resync(car)
 		car.driver = driver
 		car.control_enabled = true
+		car.set_meta("lane", lane)
+		car.set_meta("weave_amp", weave_amp)
+		car.set_meta("weave_rate", maxf(weave_rate, 1.0))
+		car.set_meta("weave_phase", _rng.randf() * TAU)
+		car.set_meta("nm_width", nm_width)
+		car.set_meta("nm_contact", nm_contact)
 		cars.append(car)
 		return true
 	return false

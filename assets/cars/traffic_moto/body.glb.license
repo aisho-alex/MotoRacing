@@ -1,0 +1,7 @@
+asset: assets/cars/traffic_moto/body.glb
+model: Moped, motorcycle.
+author: lexpartizan (https://sketchfab.com/lexpartizan)
+source: https://sketchfab.com/3d-models/3dfd252d4f4e4275a5544cdeb07226dc
+license: CC Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+changes: texture resize <=512, grounded/centered pivot, PBR fixes, scaled to length (tools/assetgen/process_bike.py)
+date: 2026-10-01
