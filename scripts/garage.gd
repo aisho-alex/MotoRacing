@@ -15,18 +15,29 @@ const STAT_ROWS := [
 ]
 const BAR_REF := 1.65  # full bar = base stat * BAR_REF (~maxed range plus margin)
 
+const SECTION_PARTS := 0
+const SECTION_SKIN := 1
+
 var bike_pos := 0
 var part_pos := 0
+var skin_pos := 0
+var section := SECTION_PARTS  # which panel the arrows/Enter drive (Tab toggles)
 
 var _bike_label: Label
 var _credits_label: Label
 var _hint_label: Label
 var _stat_rows: Array = []   # {bar: ProgressBar, value: Label}
 var _part_rows: Array = []   # {level: Label, pips: ProgressBar, cost: Label, buy: Button, label: Label}
+var _skin_label: Label
+var _skin_cost: Label
+var _skin_buy: Button
+var _skin_hint: Label
+var _skin_swatches: Array = []  # ColorRect chips: suit, accent, helmet
 
 
 func _ready() -> void:
 	bike_pos = Game.bike_index
+	skin_pos = maxi(Game.SKIN_IDS.find(Game.current_skin_id()), 0)
 	_build_ui()
 	_refresh()
 
@@ -48,19 +59,19 @@ func _build_ui() -> void:
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 12)
+	box.add_theme_constant_override("separation", 6)
 	box.offset_left = 220
 	box.offset_right = -220
-	box.offset_top = 30
-	box.offset_bottom = -30
+	box.offset_top = 8
+	box.offset_bottom = -8
 	add_child(box)
 
 	var header := HBoxContainer.new()
-	header.add_child(_label("GARAGE", 48, ACCENT))
+	header.add_child(_label("GARAGE", 40, ACCENT))
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
-	_credits_label = _label("", 36, Color.WHITE)
+	_credits_label = _label("", 30, Color.WHITE)
 	header.add_child(_credits_label)
 	box.add_child(header)
 
@@ -69,8 +80,8 @@ func _build_ui() -> void:
 	var stats_panel := PanelContainer.new()
 	stats_panel.add_theme_stylebox_override("panel", _panel_style())
 	var stats := VBoxContainer.new()
-	stats.add_theme_constant_override("separation", 4)
-	stats.add_child(_label("PERFORMANCE", 22, DIM))
+	stats.add_theme_constant_override("separation", 2)
+	stats.add_child(_label("PERFORMANCE", 18, DIM))
 	for row in STAT_ROWS:
 		stats.add_child(_stat_row(row))
 	stats_panel.add_child(stats)
@@ -79,21 +90,26 @@ func _build_ui() -> void:
 	var parts_panel := PanelContainer.new()
 	parts_panel.add_theme_stylebox_override("panel", _panel_style())
 	var parts := VBoxContainer.new()
-	parts.add_theme_constant_override("separation", 6)
-	parts.add_child(_label("UPGRADES", 22, DIM))
+	parts.add_theme_constant_override("separation", 4)
+	parts.add_child(_label("UPGRADES", 18, DIM))
 	for i in BikeTuning.PARTS.size():
 		parts.add_child(_part_row(i))
 	parts_panel.add_child(parts)
 	box.add_child(parts_panel)
 
-	_hint_label = _label("", 20, DIM)
-	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(_hint_label)
+	box.add_child(_skin_panel())
 
-	var back := _button("BACK", 26)
+	var footer := HBoxContainer.new()
+	footer.add_theme_constant_override("separation", 16)
+	_hint_label = _label("", 16, DIM)
+	_hint_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_hint_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	footer.add_child(_hint_label)
+	var back := _button("BACK", 22)
 	back.pressed.connect(_go_back)
-	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	box.add_child(back)
+	back.size_flags_horizontal = Control.SIZE_SHRINK_END
+	footer.add_child(back)
+	box.add_child(footer)
 
 
 func _bike_row() -> HBoxContainer:
@@ -104,8 +120,8 @@ func _bike_row() -> HBoxContainer:
 	var prev := _button("<", 32)
 	prev.pressed.connect(_cycle_bike.bind(-1))
 	row.add_child(prev)
-	_bike_label = _label("", 36, Color.WHITE)
-	_bike_label.custom_minimum_size = Vector2(360, 0)
+	_bike_label = _label("", 30, Color.WHITE)
+	_bike_label.custom_minimum_size = Vector2(320, 0)
 	_bike_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	row.add_child(_bike_label)
 	var next := _button(">", 32)
@@ -117,13 +133,13 @@ func _bike_row() -> HBoxContainer:
 func _stat_row(row: Dictionary) -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 18)
-	var name := _label(row["label"], 24, Color.WHITE)
+	var name := _label(row["label"], 20, Color.WHITE)
 	name.custom_minimum_size = Vector2(180, 0)
 	h.add_child(name)
 	var bar := _bar(0.0, Color(0.35, 0.75, 1.0))
-	bar.custom_minimum_size = Vector2(420, 16)
+	bar.custom_minimum_size = Vector2(420, 14)
 	h.add_child(bar)
-	var value := _label("", 22, DIM)
+	var value := _label("", 20, DIM)
 	value.custom_minimum_size = Vector2(220, 0)
 	h.add_child(value)
 	_stat_rows.append({"bar": bar, "value": value})
@@ -134,17 +150,17 @@ func _part_row(index: int) -> HBoxContainer:
 	var part: String = BikeTuning.PARTS[index]
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 18)
-	var name := _label(BikeTuning.PART_LABELS[part], 26, Color.WHITE)
+	var name := _label(BikeTuning.PART_LABELS[part], 22, Color.WHITE)
 	name.custom_minimum_size = Vector2(180, 0)
 	h.add_child(name)
-	var level := _label("", 24, Color.WHITE)
+	var level := _label("", 20, Color.WHITE)
 	level.custom_minimum_size = Vector2(90, 0)
 	h.add_child(level)
 	var pips := _bar(0.0, ACCENT)
 	pips.max_value = BikeTuning.MAX_LEVEL
-	pips.custom_minimum_size = Vector2(150, 16)
+	pips.custom_minimum_size = Vector2(150, 14)
 	h.add_child(pips)
-	var cost := _label("", 24, DIM)
+	var cost := _label("", 20, DIM)
 	cost.custom_minimum_size = Vector2(150, 0)
 	cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(cost)
@@ -154,6 +170,57 @@ func _part_row(index: int) -> HBoxContainer:
 	h.add_child(buy)
 	_part_rows.append({"name": name, "level": level, "pips": pips, "cost": cost, "buy": buy})
 	return h
+
+
+func _skin_panel() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _panel_style())
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	v.add_child(_label("RIDER SKIN", 18, DIM))
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 24)
+	var prev := _button("<", 28)
+	prev.pressed.connect(_cycle_skin.bind(-1))
+	row.add_child(prev)
+	_skin_label = _label("", 26, Color.WHITE)
+	_skin_label.custom_minimum_size = Vector2(360, 0)
+	_skin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	row.add_child(_skin_label)
+	var next := _button(">", 28)
+	next.pressed.connect(_cycle_skin.bind(1))
+	row.add_child(next)
+	v.add_child(row)
+
+	var srow := HBoxContainer.new()
+	srow.alignment = BoxContainer.ALIGNMENT_CENTER
+	srow.add_theme_constant_override("separation", 14)
+	for chip_name: String in ["SUIT", "ACCENT", "HELMET"]:
+		var chip := ColorRect.new()
+		chip.custom_minimum_size = Vector2(110, 26)
+		srow.add_child(chip)
+		srow.add_child(_label(chip_name, 18, DIM))
+		_skin_swatches.append(chip)
+	v.add_child(srow)
+
+	var brow := HBoxContainer.new()
+	brow.alignment = BoxContainer.ALIGNMENT_CENTER
+	brow.add_theme_constant_override("separation", 18)
+	_skin_cost = _label("", 20, DIM)
+	brow.add_child(_skin_cost)
+	_skin_buy = _button("EQUIP", 22)
+	_skin_buy.custom_minimum_size = Vector2(150, 0)
+	_skin_buy.pressed.connect(_buy_or_equip_skin)
+	brow.add_child(_skin_buy)
+	v.add_child(brow)
+
+	_skin_hint = _label("", 15, DIM)
+	_skin_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(_skin_hint)
+	panel.add_child(v)
+	return panel
 
 
 func _refresh() -> void:
@@ -189,7 +256,53 @@ func _refresh() -> void:
 		else:
 			_refresh_part_row(i, id, unlocked)
 
+	_refresh_skin()
 	_hint_label.text = _hint_text(unlocked, for_sale)
+
+
+## Rider skin panel: browse the catalog, live-equip owned skins and buy the
+## shop ones. Locked progression skins show their unlock hint.
+func _refresh_skin() -> void:
+	var id: String = Game.SKIN_IDS[skin_pos]
+	var def := Game.skin_def_by_id(id)
+	var unlocked := Game.is_skin_unlocked(id)
+	var for_sale := Game.skin_price(id) >= 0 and not unlocked
+	var bike := Game.bike_def_by_id(_bike_id())
+
+	var title := def.display_name
+	if for_sale:
+		title += "   [%d CR]" % Game.skin_price(id)
+	elif not unlocked:
+		title += "   [LOCKED]"
+	_skin_label.text = title
+	_skin_label.label_settings.font_color = ACCENT if section == SECTION_SKIN else Color.WHITE
+
+	var suit := def.suit_color if def.overrides(def.suit_color) else bike.rider_color
+	var accent := def.accent_color if def.overrides(def.accent_color) else bike.rider_accent_color
+	var helmet := def.helmet_color if def.overrides(def.helmet_color) else bike.helmet_color
+	_skin_swatches[0].color = suit
+	_skin_swatches[1].color = accent
+	_skin_swatches[2].color = helmet
+
+	if for_sale:
+		_skin_cost.text = "%d CR" % Game.skin_price(id)
+		_skin_cost.label_settings.font_color = ACCENT if Game.credits >= Game.skin_price(id) else DIM
+		_skin_buy.text = "BUY"
+		_skin_buy.disabled = not Game.can_afford_skin(id)
+		_skin_hint.text = "Enter: buy for %d CR" % Game.skin_price(id)
+	elif not unlocked:
+		_skin_cost.text = "LOCKED"
+		_skin_cost.label_settings.font_color = DIM
+		_skin_buy.text = "--"
+		_skin_buy.disabled = true
+		_skin_hint.text = Game.skin_lock_hint(id)
+	else:
+		var equipped := Game.current_skin_id() == id
+		_skin_cost.text = "SELECTED" if equipped else "OWNED"
+		_skin_cost.label_settings.font_color = ACCENT if equipped else DIM
+		_skin_buy.text = "EQUIPPED" if equipped else "EQUIP"
+		_skin_buy.disabled = equipped
+		_skin_hint.text = def.display_name + ("  ·  DECAL" if def.has_decals() else "")
 
 
 ## Shop bike rows double as the "buy the bike" button: they show the price
@@ -246,7 +359,7 @@ func _hint_text(unlocked: bool, for_sale: bool = false) -> String:
 		return "Need %d CR to buy this bike" % price
 	if not unlocked:
 		return Game.lock_hint(_bike_id())
-	return "Arrows: bike / upgrade    Enter: buy    Esc: menu"
+	return "Arrows: bike / upgrade / skin    Tab: panel    Enter: buy    Esc: menu"
 
 
 func _cycle_bike(dir: int) -> void:
@@ -259,6 +372,28 @@ func _cycle_bike(dir: int) -> void:
 func _cycle_part(dir: int) -> void:
 	part_pos = wrapi(part_pos + dir, 0, BikeTuning.PARTS.size())
 	Audio.play_ui("click")
+	_refresh()
+
+
+func _cycle_skin(dir: int) -> void:
+	section = SECTION_SKIN
+	skin_pos = wrapi(skin_pos + dir, 0, Game.SKIN_IDS.size())
+	var id: String = Game.SKIN_IDS[skin_pos]
+	if Game.is_skin_unlocked(id):
+		Game.select_skin(id)
+	Audio.play_ui("click")
+	_refresh()
+
+
+func _buy_or_equip_skin() -> void:
+	section = SECTION_SKIN
+	var id: String = Game.SKIN_IDS[skin_pos]
+	if Game.is_skin_unlocked(id):
+		Audio.play_ui("unlock" if Game.select_skin(id) else "click")
+	elif Game.buy_skin(id):
+		Audio.play_ui("unlock")
+	else:
+		Audio.play_ui("click")
 	_refresh()
 
 
@@ -291,16 +426,35 @@ func _go_back() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		_go_back()
+	elif event.is_action_pressed("ui_focus_next"):
+		section = SECTION_SKIN if section == SECTION_PARTS else SECTION_PARTS
+		Audio.play_ui("click")
+		_refresh()
 	elif event.is_action_pressed("ui_left"):
-		_cycle_bike(-1)
+		if section == SECTION_SKIN:
+			_cycle_skin(-1)
+		else:
+			_cycle_bike(-1)
 	elif event.is_action_pressed("ui_right"):
-		_cycle_bike(1)
+		if section == SECTION_SKIN:
+			_cycle_skin(1)
+		else:
+			_cycle_bike(1)
 	elif event.is_action_pressed("ui_up"):
-		_cycle_part(-1)
+		if section == SECTION_SKIN:
+			_cycle_skin(-1)
+		else:
+			_cycle_part(-1)
 	elif event.is_action_pressed("ui_down"):
-		_cycle_part(1)
+		if section == SECTION_SKIN:
+			_cycle_skin(1)
+		else:
+			_cycle_part(1)
 	elif event.is_action_pressed("ui_accept"):
-		_buy_selected()
+		if section == SECTION_SKIN:
+			_buy_or_equip_skin()
+		else:
+			_buy_selected()
 
 
 func _bar(value: float, fill: Color) -> ProgressBar:
@@ -327,7 +481,7 @@ func _panel_style() -> StyleBoxFlat:
 	style.border_color = Color(1, 1, 1, 0.08)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(10)
-	style.set_content_margin_all(12)
+	style.set_content_margin_all(6)
 	return style
 
 

@@ -74,6 +74,7 @@ var _dust: Array[GPUParticles3D] = []
 var _sparks: GPUParticles3D = null
 
 var rider: Rider = null          # seated rider (combat/animation in M2)
+var player_skin: RiderSkinDef = null  # set on the player's bike by main.gd
 var _tilt: Node3D = null         # visual lean/wheelie node (holds model + rider)
 var _lean_roll := 0.0            # visual roll into corners (radians)
 var _lean_pitch := 0.0           # visual wheelie under boost (radians)
@@ -669,8 +670,20 @@ func _build_visuals() -> void:
 		rider.name = "Rider"
 		rider.position = mount
 		rider.scale = Vector3.ONE * def.rider_scale
-		rider.setup(def.rider_color, def.helmet_color, def)
+		rider.setup(def.rider_color, def.helmet_color, def, _resolve_skin())
 		_tilt.add_child(rider)
+
+
+## The player's chosen global skin wins for their own bike; AI keep the plain
+## per-bike colors unless the machine names a skin (bosses).
+func _resolve_skin() -> RiderSkinDef:
+	if player_skin != null:
+		return player_skin
+	if def.rider_skin_id != "":
+		var gs := get_node_or_null("/root/Game")
+		if gs != null:
+			return gs.skin_def_by_id(def.rider_skin_id)
+	return null
 
 
 ## Wheels are any Node3D whose name contains "wheel"; front wheels are those

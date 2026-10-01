@@ -13,6 +13,17 @@ const SHOP_BIKES := {
 	"boss_kitsune": 6000,
 	"boss_cinder": 8000,
 }
+## Rider skins. The catalog order drives the garage picker; prices live here
+## (like SHOP_BIKES) while progression gates live in each RiderSkinDef.
+const SKIN_IDS := [
+	"stock", "leather", "neon", "midnight", "flame", "checker", "rose", "gold",
+]
+const SHOP_SKINS := {
+	"neon": 1500,
+	"midnight": 2000,
+	"flame": 2500,
+	"checker": 3000,
+}
 ## Pre-motorcycle car ids, position-for-position with BIKE_IDS; used only to
 ## migrate an old savefile's upgrade levels.
 const LEGACY_CAR_IDS := ["compact_01", "sport_01", "muscle_01", "hyper_01"]
@@ -37,6 +48,8 @@ var track_tiers := {}  # track_id -> number of unlocked difficulty tiers (1..3)
 var records := {}  # "track_id:tier" -> {"lap": best_lap, "race": best_race} (-1 = unset)
 var owned_bikes := []  # shop bike ids bought with credits
 var bosses_beaten := {}  # track_id -> true once the boss race was won
+var selected_skin := "stock"  # player rider skin id (global, all bikes)
+var owned_skins := []  # skins bought with credits
 
 
 func _ready() -> void:
@@ -356,6 +369,91 @@ func beat_boss(track_id: String, bonus: int) -> int:
 	return maxi(bonus, 0)
 
 
+## --- Rider skins (global, purchased in the garage or earned by progress) ---
+
+func skin_def_by_id(skin_id: String) -> RiderSkinDef:
+	var path := "res://assets/data/skins/%s.tres" % skin_id
+	if ResourceLoader.exists(path):
+		var res := load(path) as RiderSkinDef
+		if res != null:
+			return res
+	return RiderSkinDef.new()
+
+
+## The catalog is the source of truth: unknown ids fall back to stock.
+func current_skin_id() -> String:
+	return selected_skin if selected_skin in SKIN_IDS else "stock"
+
+
+func selected_skin_def() -> RiderSkinDef:
+	return skin_def_by_id(current_skin_id())
+
+
+func is_skin_unlocked(skin_id: String) -> bool:
+	if skin_id == "stock":
+		return true
+	if SHOP_SKINS.has(skin_id):
+		return skin_id in owned_skins
+	var def := skin_def_by_id(skin_id)
+	if def.unlock_boss != "":
+		return boss_beaten(def.unlock_boss)
+	if def.unlock_races >= 0:
+		return races_done >= def.unlock_races
+	return true
+
+
+func skin_lock_hint(skin_id: String) -> String:
+	var name := skin_def_by_id(skin_id).display_name
+	if SHOP_SKINS.has(skin_id):
+		return "%s — buy in the garage for %d CR" % [name, skin_price(skin_id)]
+	var def := skin_def_by_id(skin_id)
+	if def.unlock_boss != "":
+		return "%s — beat the %s boss to unlock" % [name, def.unlock_boss]
+	if def.unlock_races >= 0:
+		return "%s — finish %d race(s) to unlock" % [name, def.unlock_races]
+	return name
+
+
+## Price of a shop skin, or -1 for skins that are not for sale.
+func skin_price(skin_id: String) -> int:
+	return int(SHOP_SKINS.get(skin_id, -1))
+
+
+func can_afford_skin(skin_id: String) -> bool:
+	var price := skin_price(skin_id)
+	return price >= 0 and credits >= price and not (skin_id in owned_skins)
+
+
+## Buys a shop skin, deducting credits. Returns true on success.
+func buy_skin(skin_id: String) -> bool:
+	if not can_afford_skin(skin_id):
+		return false
+	credits -= int(SHOP_SKINS[skin_id])
+	owned_skins.append(skin_id)
+	select_skin(skin_id)
+	_save_progress()
+	return true
+
+
+## Selects an unlocked skin as the player's global rider look. Persists.
+func select_skin(skin_id: String) -> bool:
+	if skin_id not in SKIN_IDS or not is_skin_unlocked(skin_id):
+		return false
+	selected_skin = skin_id
+	_save_progress()
+	return true
+
+
+## Steps to the next unlocked skin (used for quick keyboard selection).
+func cycle_skin(dir: int) -> void:
+	var pos := maxi(SKIN_IDS.find(current_skin_id()), 0)
+	for _attempt in SKIN_IDS.size():
+		pos = wrapi(pos + dir, 0, SKIN_IDS.size())
+		if is_skin_unlocked(SKIN_IDS[pos]):
+			select_skin(SKIN_IDS[pos])
+			return
+
+
 ## Base def with the bike's upgrades applied — used for the player's bike only.
 func player_bike_def() -> BikeDef:
 	return tuned_def_for(current_bike_id())
@@ -419,12 +517,23 @@ func _load_progress() -> void:
 		var sid := String(v)
 		if SHOP_BIKES.has(sid) and not (sid in owned_bikes):
 			owned_bikes.append(sid)
+	selected_skin = String(cfg.get_value("progress", "selected_skin", "stock"))
+	if selected_skin not in SKIN_IDS:
+		selected_skin = "stock"
+	owned_skins = []
+	for v in cfg.get_value("progress", "owned_skins", []):
+		var sk := String(v)
+		if SHOP_SKINS.has(sk) and not (sk in owned_skins):
+			owned_skins.append(sk)
 	bosses_beaten = {}
 	var saved_bosses: Variant = cfg.get_value("progress", "bosses_beaten", {})
 	if saved_bosses is Dictionary:
 		for k in (saved_bosses as Dictionary):
 			if bool((saved_bosses as Dictionary)[k]):
 				bosses_beaten[String(k)] = true
+	# validates after bosses_beaten is restored (rose/gold depend on it)
+	if not is_skin_unlocked(selected_skin):
+		selected_skin = "stock"
 
 
 func _save_progress() -> void:
@@ -438,6 +547,8 @@ func _save_progress() -> void:
 	cfg.set_value("progress", "unlocked_tracks", unlocked_tracks)
 	cfg.set_value("progress", "owned_bikes", owned_bikes)
 	cfg.set_value("progress", "bosses_beaten", bosses_beaten)
+	cfg.set_value("progress", "selected_skin", selected_skin)
+	cfg.set_value("progress", "owned_skins", owned_skins)
 	for id in BIKE_IDS:
 		cfg.set_value("upgrades", id, upgrade_levels(id))
 	for id in TRACK_IDS:

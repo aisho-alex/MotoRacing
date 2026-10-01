@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RiderSkinDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/rider_skin_def.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+id = "checker"
+display_name = "Race Livery"
+suit_color = Color(0.9, 0.9, 0.93, 1)
+accent_color = Color(0.08, 0.08, 0.1, 1)
+helmet_color = Color(0.9, 0.9, 0.93, 1)
+decal_dir = "res://assets/skins/checker"

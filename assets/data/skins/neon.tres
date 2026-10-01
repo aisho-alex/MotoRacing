@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RiderSkinDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/rider_skin_def.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+id = "neon"
+display_name = "Neon Grid"
+suit_color = Color(0.05, 0.06, 0.09, 1)
+accent_color = Color(0.35, 1, 0.4, 1)
+helmet_color = Color(0.05, 0.06, 0.09, 1)
+visor_color = Color(0.05, 0.06, 0.09, 1)
+decal_dir = "res://assets/skins/neon"

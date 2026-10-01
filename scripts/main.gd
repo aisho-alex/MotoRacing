@@ -45,6 +45,7 @@ func _ready() -> void:
 	bike = RaceBike.new()
 	bike.name = "Bike"
 	bike.def = Game.player_bike_def()
+	bike.player_skin = Game.selected_skin_def()
 	bike.night_lights = tdef.night_racing
 	add_child(bike)
 	bike.road_half_width = tdef.road_half_width

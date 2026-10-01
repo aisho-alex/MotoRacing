@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RiderSkinDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/rider_skin_def.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+id = "rose"
+display_name = "Sakura"
+suit_color = Color(0.16, 0.1, 0.16, 1)
+accent_color = Color(1, 0.55, 0.75, 1)
+helmet_color = Color(0.86, 0.76, 0.82, 1)
+decal_dir = "res://assets/skins/rose"
+unlock_boss = "sakura_01"

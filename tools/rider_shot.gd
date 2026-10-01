@@ -1,6 +1,6 @@
 extends SceneTree
 ## Dev tool: close-up of the procedural Skeleton3D rider, with pose/IK checks.
-## env: BIKE=0..4 POSE=idle|punch|kick|crash OUT=path AZ=deg DIST=m
+## env: BIKE=0..4 SKIN=<id> POSE=idle|punch|kick|crash OUT=path AZ=deg DIST=m
 ## Run under xvfb-run.
 
 var _done := false
@@ -18,6 +18,8 @@ func _run() -> void:
 	var game := root.get_node_or_null("/root/Game")
 	if game != null and OS.get_environment("BIKE") != "":
 		game.bike_index = int(OS.get_environment("BIKE"))
+	if game != null and OS.get_environment("SKIN") != "":
+		game.selected_skin = OS.get_environment("SKIN")
 	var main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame

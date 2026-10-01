@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="RiderSkinDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/rider_skin_def.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+id = "stock"
+display_name = "Stock"

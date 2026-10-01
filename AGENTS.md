@@ -42,6 +42,17 @@
   лестницы.
   Наклон/вилли — узел `Tilt` (bike-space), `BikeDef.lean_max`. Колёса
   крутятся, если у GLB есть ноды `wheel`/`tyre` (иначе статичны).
+- Скины райдера (`scripts/rider_skin_def.gd`, `assets/data/skins/*.tres`):
+  глобальный скин игрока (не пер-байковый), выбирается в гараже (панель RIDER
+  SKIN, Tab — переключение панели). Цвета (suit/accent/helmet/glove/boot/visor)
+  с alpha 0 наследуются от `BikeDef`; каталог `Game.SKIN_IDS`, цены
+  `Game.SHOP_SKINS`, сейв — `selected_skin`/`owned_skins`. Скины `rose`/`gold`
+  открываются за боссов (`unlock_boss`). Декали-эмблемы (грудь + бока шлема) —
+  RGBA-текстуры `assets/skins/<id>/decal.png` (белый RGB + узор в альфе),
+  тонируются `accent_color` (alpha-scissor материал). Генерация —
+  `tools/assetgen/gen_rider_skins.py` через SwarmUI (Z-Image Turbo), проверка —
+  `tools/check_skins.gd`. Игроку скин ставит `main.gd` (`RaceBike.player_skin`),
+  AI/боссы — цвета `BikeDef` (у боссов свои именные цвета).
 - Бой (Road Rash): Q/E — удар влево/вправо, F — пинок; здоровье в HUD,
   нокдаун → вайпаут → возврат через 4.2 с. Вайпаут — фазовый цикл райдера
   (`rider.gd`: eject → getup → run → lift → mount): райдер вылетает с байка,
@@ -81,7 +92,7 @@
 - Проверки баланса/магазина/кампании/боя/механик (должны быть PASS):
   `tools/check_tuning.gd`, `tools/check_shop.gd`, `tools/check_campaign.gd`,
   `tools/check_combat.gd`, `tools/check_mechanics.gd`, `tools/check_rider.gd`,
-  `tools/check_traffic_orient.gd`, `tools/check_buildings.gd`.
+  `tools/check_skins.gd`, `tools/check_traffic_orient.gd`, `tools/check_buildings.gd`.
 - Скриншот байка крупным планом: `tools/bike_close_shot.gd` (через `xvfb-run`;
   POSE=punch|kick|crash для боевых поз). Превью трасс/гаража — `tools/gen_track.gd`,
   `tools/preview_shot.gd` (`SHOT=menu|race|garage`).

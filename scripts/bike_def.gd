@@ -19,6 +19,9 @@ const DEFAULT_PATH := "res://assets/data/bikes/sport_01.tres"
 @export var rider_color := Color(0.16, 0.18, 0.24)
 @export var rider_accent_color := Color(0.58, 0.61, 0.68)
 @export var helmet_color := Color(0.86, 0.88, 0.92)
+## Named rider skin used by AI on this machine (bosses). Empty keeps the plain
+## per-bike rider colors; the player's own chosen skin always overrides it.
+@export var rider_skin_id := ""
 ## Visual lean into corners, degrees (0 disables).
 @export var lean_max := 30.0
 ## Optional GLB override; when empty the procedural bike is built instead.
