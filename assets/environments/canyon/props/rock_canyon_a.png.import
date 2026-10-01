@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://ibpt1p2ib3v6"
 path.s3tc="res://.godot/imported/rock_canyon_a.png-2f230f0ac61ea9b6334f5b9860c88b2e.s3tc.ctex"
+path.etc2="res://.godot/imported/rock_canyon_a.png-2f230f0ac61ea9b6334f5b9860c88b2e.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/canyon/props/rock_canyon_a.png"
-dest_files=["res://.godot/imported/rock_canyon_a.png-2f230f0ac61ea9b6334f5b9860c88b2e.s3tc.ctex"]
+dest_files=["res://.godot/imported/rock_canyon_a.png-2f230f0ac61ea9b6334f5b9860c88b2e.s3tc.ctex", "res://.godot/imported/rock_canyon_a.png-2f230f0ac61ea9b6334f5b9860c88b2e.etc2.ctex"]
 
 [params]
 

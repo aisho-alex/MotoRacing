@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cf5vd2cwnsbig"
 path.s3tc="res://.godot/imported/asphalt_albedo.webp-d1f819edb64c3bf38571d95bced80f06.s3tc.ctex"
+path.etc2="res://.godot/imported/asphalt_albedo.webp-d1f819edb64c3bf38571d95bced80f06.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/sakura/road/asphalt_albedo.webp"
-dest_files=["res://.godot/imported/asphalt_albedo.webp-d1f819edb64c3bf38571d95bced80f06.s3tc.ctex"]
+dest_files=["res://.godot/imported/asphalt_albedo.webp-d1f819edb64c3bf38571d95bced80f06.s3tc.ctex", "res://.godot/imported/asphalt_albedo.webp-d1f819edb64c3bf38571d95bced80f06.etc2.ctex"]
 
 [params]
 

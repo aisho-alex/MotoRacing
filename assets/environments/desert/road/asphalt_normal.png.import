@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bvgnjtl8mfl6h"
 path.s3tc="res://.godot/imported/asphalt_normal.png-cdcaca2f451da3f2fb5e20c8fccc7586.s3tc.ctex"
+path.etc2="res://.godot/imported/asphalt_normal.png-cdcaca2f451da3f2fb5e20c8fccc7586.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/desert/road/asphalt_normal.png"
-dest_files=["res://.godot/imported/asphalt_normal.png-cdcaca2f451da3f2fb5e20c8fccc7586.s3tc.ctex"]
+dest_files=["res://.godot/imported/asphalt_normal.png-cdcaca2f451da3f2fb5e20c8fccc7586.s3tc.ctex", "res://.godot/imported/asphalt_normal.png-cdcaca2f451da3f2fb5e20c8fccc7586.etc2.ctex"]
 
 [params]
 

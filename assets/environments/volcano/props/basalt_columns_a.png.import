@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://fgrpjitb5v2i"
 path.s3tc="res://.godot/imported/basalt_columns_a.png-c74266efe77934aafc7a583395faa68a.s3tc.ctex"
+path.etc2="res://.godot/imported/basalt_columns_a.png-c74266efe77934aafc7a583395faa68a.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/volcano/props/basalt_columns_a.png"
-dest_files=["res://.godot/imported/basalt_columns_a.png-c74266efe77934aafc7a583395faa68a.s3tc.ctex"]
+dest_files=["res://.godot/imported/basalt_columns_a.png-c74266efe77934aafc7a583395faa68a.s3tc.ctex", "res://.godot/imported/basalt_columns_a.png-c74266efe77934aafc7a583395faa68a.etc2.ctex"]
 
 [params]
 

@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dttow0yegow72"
 path.s3tc="res://.godot/imported/asphalt_normal.png-af45ace2462a236836bf63ea41a67994.s3tc.ctex"
+path.etc2="res://.godot/imported/asphalt_normal.png-af45ace2462a236836bf63ea41a67994.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/alpine/road/asphalt_normal.png"
-dest_files=["res://.godot/imported/asphalt_normal.png-af45ace2462a236836bf63ea41a67994.s3tc.ctex"]
+dest_files=["res://.godot/imported/asphalt_normal.png-af45ace2462a236836bf63ea41a67994.s3tc.ctex", "res://.godot/imported/asphalt_normal.png-af45ace2462a236836bf63ea41a67994.etc2.ctex"]
 
 [params]
 

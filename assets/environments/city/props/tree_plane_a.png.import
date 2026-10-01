@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dxyl14536dpci"
 path.s3tc="res://.godot/imported/tree_plane_a.png-412c0c3f56b62a63cc795130cad213eb.s3tc.ctex"
+path.etc2="res://.godot/imported/tree_plane_a.png-412c0c3f56b62a63cc795130cad213eb.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/props/tree_plane_a.png"
-dest_files=["res://.godot/imported/tree_plane_a.png-412c0c3f56b62a63cc795130cad213eb.s3tc.ctex"]
+dest_files=["res://.godot/imported/tree_plane_a.png-412c0c3f56b62a63cc795130cad213eb.s3tc.ctex", "res://.godot/imported/tree_plane_a.png-412c0c3f56b62a63cc795130cad213eb.etc2.ctex"]
 
 [params]
 

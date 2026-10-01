@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cycxox6pxy182"
 path.s3tc="res://.godot/imported/asphalt_orm.png-86972244e0dd1dfb90546d3405713cc0.s3tc.ctex"
+path.etc2="res://.godot/imported/asphalt_orm.png-86972244e0dd1dfb90546d3405713cc0.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/sakura/road/asphalt_orm.png"
-dest_files=["res://.godot/imported/asphalt_orm.png-86972244e0dd1dfb90546d3405713cc0.s3tc.ctex"]
+dest_files=["res://.godot/imported/asphalt_orm.png-86972244e0dd1dfb90546d3405713cc0.s3tc.ctex", "res://.godot/imported/asphalt_orm.png-86972244e0dd1dfb90546d3405713cc0.etc2.ctex"]
 
 [params]
 

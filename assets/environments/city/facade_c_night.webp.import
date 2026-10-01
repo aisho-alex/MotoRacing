@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://ctd7e4rtnat1y"
 path.s3tc="res://.godot/imported/facade_c_night.webp-b853a41d7aa2fe6953be918368be9641.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_c_night.webp-b853a41d7aa2fe6953be918368be9641.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/facade_c_night.webp"
-dest_files=["res://.godot/imported/facade_c_night.webp-b853a41d7aa2fe6953be918368be9641.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_c_night.webp-b853a41d7aa2fe6953be918368be9641.s3tc.ctex", "res://.godot/imported/facade_c_night.webp-b853a41d7aa2fe6953be918368be9641.etc2.ctex"]
 
 [params]
 

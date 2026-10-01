@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://da17m2703oqh0"
 path.s3tc="res://.godot/imported/facade_d_emission.webp-c8345959f2235a766299bb7461b7fb5a.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_d_emission.webp-c8345959f2235a766299bb7461b7fb5a.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/facade_d_emission.webp"
-dest_files=["res://.godot/imported/facade_d_emission.webp-c8345959f2235a766299bb7461b7fb5a.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_d_emission.webp-c8345959f2235a766299bb7461b7fb5a.s3tc.ctex", "res://.godot/imported/facade_d_emission.webp-c8345959f2235a766299bb7461b7fb5a.etc2.ctex"]
 
 [params]
 

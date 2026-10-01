@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://ev24dhsldnq7"
 path.s3tc="res://.godot/imported/bush_ash_a.png-75ccfbbf536e5b1fe7961dce5e383bd6.s3tc.ctex"
+path.etc2="res://.godot/imported/bush_ash_a.png-75ccfbbf536e5b1fe7961dce5e383bd6.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/volcano/props/bush_ash_a.png"
-dest_files=["res://.godot/imported/bush_ash_a.png-75ccfbbf536e5b1fe7961dce5e383bd6.s3tc.ctex"]
+dest_files=["res://.godot/imported/bush_ash_a.png-75ccfbbf536e5b1fe7961dce5e383bd6.s3tc.ctex", "res://.godot/imported/bush_ash_a.png-75ccfbbf536e5b1fe7961dce5e383bd6.etc2.ctex"]
 
 [params]
 

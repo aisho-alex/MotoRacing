@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://doaj0wy11yuhr"
 path.s3tc="res://.godot/imported/asphalt_albedo.webp-653c337509c6702262389490d1ee683b.s3tc.ctex"
+path.etc2="res://.godot/imported/asphalt_albedo.webp-653c337509c6702262389490d1ee683b.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/volcano/road/asphalt_albedo.webp"
-dest_files=["res://.godot/imported/asphalt_albedo.webp-653c337509c6702262389490d1ee683b.s3tc.ctex"]
+dest_files=["res://.godot/imported/asphalt_albedo.webp-653c337509c6702262389490d1ee683b.s3tc.ctex", "res://.godot/imported/asphalt_albedo.webp-653c337509c6702262389490d1ee683b.etc2.ctex"]
 
 [params]
 

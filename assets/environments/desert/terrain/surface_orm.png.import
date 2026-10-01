@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dasr8v3s831i1"
 path.s3tc="res://.godot/imported/surface_orm.png-72cacafa90b701394ecaefe8737b5bb4.s3tc.ctex"
+path.etc2="res://.godot/imported/surface_orm.png-72cacafa90b701394ecaefe8737b5bb4.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/desert/terrain/surface_orm.png"
-dest_files=["res://.godot/imported/surface_orm.png-72cacafa90b701394ecaefe8737b5bb4.s3tc.ctex"]
+dest_files=["res://.godot/imported/surface_orm.png-72cacafa90b701394ecaefe8737b5bb4.s3tc.ctex", "res://.godot/imported/surface_orm.png-72cacafa90b701394ecaefe8737b5bb4.etc2.ctex"]
 
 [params]
 

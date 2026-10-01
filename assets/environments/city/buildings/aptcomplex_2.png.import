@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bllbtv40p5aws"
 path.s3tc="res://.godot/imported/aptcomplex_2.png-1b9e4416aa30e6c8cda6ea4d4d1a0009.s3tc.ctex"
+path.etc2="res://.godot/imported/aptcomplex_2.png-1b9e4416aa30e6c8cda6ea4d4d1a0009.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/buildings/aptcomplex_2.png"
-dest_files=["res://.godot/imported/aptcomplex_2.png-1b9e4416aa30e6c8cda6ea4d4d1a0009.s3tc.ctex"]
+dest_files=["res://.godot/imported/aptcomplex_2.png-1b9e4416aa30e6c8cda6ea4d4d1a0009.s3tc.ctex", "res://.godot/imported/aptcomplex_2.png-1b9e4416aa30e6c8cda6ea4d4d1a0009.etc2.ctex"]
 
 [params]
 

@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://b30d4jes8t1kd"
 path.s3tc="res://.godot/imported/facade_d_orm.png-e5656d2d0e3d4a4e70b9a8f166e88414.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_d_orm.png-e5656d2d0e3d4a4e70b9a8f166e88414.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/volcano/facade_d_orm.png"
-dest_files=["res://.godot/imported/facade_d_orm.png-e5656d2d0e3d4a4e70b9a8f166e88414.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_d_orm.png-e5656d2d0e3d4a4e70b9a8f166e88414.s3tc.ctex", "res://.godot/imported/facade_d_orm.png-e5656d2d0e3d4a4e70b9a8f166e88414.etc2.ctex"]
 
 [params]
 

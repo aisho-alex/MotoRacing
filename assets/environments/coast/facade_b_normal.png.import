@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c0u1iy6yjj48"
 path.s3tc="res://.godot/imported/facade_b_normal.png-4a59500c9451f08183688e72081123a7.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_b_normal.png-4a59500c9451f08183688e72081123a7.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/coast/facade_b_normal.png"
-dest_files=["res://.godot/imported/facade_b_normal.png-4a59500c9451f08183688e72081123a7.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_b_normal.png-4a59500c9451f08183688e72081123a7.s3tc.ctex", "res://.godot/imported/facade_b_normal.png-4a59500c9451f08183688e72081123a7.etc2.ctex"]
 
 [params]
 

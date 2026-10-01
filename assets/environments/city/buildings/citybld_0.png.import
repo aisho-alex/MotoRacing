@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://b0hj255v0ckrn"
 path.s3tc="res://.godot/imported/citybld_0.png-50f84ab371e9db5144847b2a336837b8.s3tc.ctex"
+path.etc2="res://.godot/imported/citybld_0.png-50f84ab371e9db5144847b2a336837b8.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/buildings/citybld_0.png"
-dest_files=["res://.godot/imported/citybld_0.png-50f84ab371e9db5144847b2a336837b8.s3tc.ctex"]
+dest_files=["res://.godot/imported/citybld_0.png-50f84ab371e9db5144847b2a336837b8.s3tc.ctex", "res://.godot/imported/citybld_0.png-50f84ab371e9db5144847b2a336837b8.etc2.ctex"]
 
 [params]
 

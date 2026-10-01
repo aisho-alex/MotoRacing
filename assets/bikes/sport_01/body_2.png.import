@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dun6v14sx270m"
 path.s3tc="res://.godot/imported/body_2.png-a59e9728c7156d19381a0b3a94ea1269.s3tc.ctex"
+path.etc2="res://.godot/imported/body_2.png-a59e9728c7156d19381a0b3a94ea1269.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/bikes/sport_01/body_2.png"
-dest_files=["res://.godot/imported/body_2.png-a59e9728c7156d19381a0b3a94ea1269.s3tc.ctex"]
+dest_files=["res://.godot/imported/body_2.png-a59e9728c7156d19381a0b3a94ea1269.s3tc.ctex", "res://.godot/imported/body_2.png-a59e9728c7156d19381a0b3a94ea1269.etc2.ctex"]
 
 [params]
 

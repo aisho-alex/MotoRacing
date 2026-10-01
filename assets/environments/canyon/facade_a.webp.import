@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dgbdr5oj63k2a"
 path.s3tc="res://.godot/imported/facade_a.webp-3d5f2cb2f8b341f11c13a815fa3586f4.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_a.webp-3d5f2cb2f8b341f11c13a815fa3586f4.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/canyon/facade_a.webp"
-dest_files=["res://.godot/imported/facade_a.webp-3d5f2cb2f8b341f11c13a815fa3586f4.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_a.webp-3d5f2cb2f8b341f11c13a815fa3586f4.s3tc.ctex", "res://.godot/imported/facade_a.webp-3d5f2cb2f8b341f11c13a815fa3586f4.etc2.ctex"]
 
 [params]
 

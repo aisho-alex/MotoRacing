@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bdjpq78ks1x0b"
 path.s3tc="res://.godot/imported/chicago_5.png-0716e77f4d8368c1abccb18f29c17436.s3tc.ctex"
+path.etc2="res://.godot/imported/chicago_5.png-0716e77f4d8368c1abccb18f29c17436.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/buildings/chicago_5.png"
-dest_files=["res://.godot/imported/chicago_5.png-0716e77f4d8368c1abccb18f29c17436.s3tc.ctex"]
+dest_files=["res://.godot/imported/chicago_5.png-0716e77f4d8368c1abccb18f29c17436.s3tc.ctex", "res://.godot/imported/chicago_5.png-0716e77f4d8368c1abccb18f29c17436.etc2.ctex"]
 
 [params]
 

@@ -19,17 +19,29 @@ const HEALTH_MAX := 100.0
 const PUNCH_DAMAGE := 13.0
 const KICK_DAMAGE := 22.0
 const ATTACK_COOLDOWN := 0.45
-const WIPEOUT_TIME := 3.0
+const WIPEOUT_TIME := 4.2  # full rider recovery: eject, get up, run, lift, remount
 const CRASH_IMPACT_SPEED := 26.0  # hard hit above this speed = instant wipeout
 const VEHICLE_HIT_SPEED := 10.0   # m/s into a traffic car / bike that starts hurting
 const WALL_HIT_SPEED := 14.0      # m/s into a wall that starts hurting
 const CRASH_HURT_COOLDOWN := 0.8
+
+## Slipstream: tucking in behind another rider inside a narrow cone grants a
+## small top-speed bump and faster nitro regen. Applies to every racer (player
+## and AI), so the pack can chain drafts.
+const DRAFT_RANGE := 16.0
+const DRAFT_MIN_GAP := 3.0
+const DRAFT_HALF_WIDTH := 2.2
+const DRAFT_MIN_SPEED := 10.0
+const DRAFT_MAX_MULT := 1.08
+const DRAFT_SPOOL := 2.0
+const DRAFT_REGEN_BONUS := 0.35
 
 var def: BikeDef
 var road_half_width := 6.0
 var night_lights := false
 var driver: AiDriver = null  # when set, inputs come from AI instead of Input
 var is_opponent := false     # opponents ghost through each other (arcade AI)
+var is_traffic := false      # civilian car: hard crash object, not a racer
 
 var control_enabled := false
 var road_distance_fn := Callable()
@@ -40,6 +52,8 @@ var nitro_active := false
 var _nitro_regen_timer := 0.0
 var _boost_mult := 1.0
 var _pad_boost_timer := 0.0
+var _draft_mult := 1.0
+var _drafting := false
 var _exhaust: Array[GPUParticles3D] = []
 
 var _wheels: Array[Node3D] = []
@@ -65,6 +79,7 @@ var combat_targets: Array = []
 var _attack_cooldown := 0.0
 var _wipeout_timer := 0.0
 var _wobble := 0.0
+var _fall_side := -1.0           # which way the bike tips on a wipeout (+1 left, -1 right)
 var _pre_slide_velocity := Vector3.ZERO
 var _crash_hurt_cooldown := 0.0
 var attacker: RaceBike = null      # last rider who hit us (AI grudge)
@@ -177,9 +192,12 @@ func _physics_process(delta: float) -> void:
 	_update_nitro(delta, want_nitro and throttle > 0.0 and vf > -0.5)
 	_set_exhaust(nitro_active or _pad_boost_timer > 0.0)
 
+	# --- slipstream (also feeds the nitro tank a little)
+	_update_draft(delta, vf)
+
 	# --- longitudinal control
 	if throttle > 0.0:
-		var target_speed := def.max_speed * _boost_mult
+		var target_speed := def.max_speed * _boost_mult * _draft_mult
 		var accel := def.accel * (def.nitro_accel_mult if nitro_active or _pad_boost_timer > 0.0 else 1.0)
 		vf = move_toward(vf, target_speed, accel * throttle * delta)
 	elif throttle < 0.0:
@@ -286,8 +304,8 @@ func take_hit(damage: float, from_pos: Vector3, from: RaceBike = null) -> void:
 
 
 ## Direct crash damage (collisions), no combat wobble. `source` is the collided
-## RaceBike (traffic/rival) or null for a static wall; `impact` is the pre-slide
-## speed into the surface (m/s).
+## traffic car or null for a static wall; `impact` is the closing speed into the
+## surface (m/s). Rival bikes never reach here — see `_resolve_impact`.
 func apply_crash_impact(source: RaceBike, impact: float) -> void:
 	if wiped_out_now or not control_enabled or _crash_hurt_cooldown > 0.0:
 		return
@@ -309,6 +327,36 @@ func apply_crash_impact(source: RaceBike, impact: float) -> void:
 		_start_wipeout()
 
 
+## Classifies a hard slide contact. `other` is the collided RaceBike or null for
+## a static wall; `impact` is the closing speed (m/s). Rider-on-rider contact is
+## a shove with no health loss; traffic cars and walls deal crash damage.
+func _resolve_impact(other: RaceBike, normal: Vector3, impact: float) -> void:
+	if other != null and not other.is_traffic:
+		_apply_bump(other, normal, impact)
+		return
+	apply_crash_impact(other, impact)
+	if impact > CRASH_IMPACT_SPEED and control_enabled and not wiped_out_now:
+		_start_wipeout()
+
+
+## Rider-on-rider shove: the struck bike wobbles and is nudged along the contact
+## normal, the rammer sheds a little speed. Nobody loses health (that is what
+## punch/kick are for).
+func _apply_bump(other: RaceBike, normal: Vector3, impact: float) -> void:
+	if other == null or not is_instance_valid(other):
+		return
+	var away := -normal
+	away.y = 0.0
+	if away.length() < 0.01:
+		return
+	away = away.normalized()
+	var side := other.global_transform.basis.x.dot(away)
+	var wobble := signf(side if absf(side) > 0.05 else 1.0)
+	other._wobble += wobble * clampf(impact * 0.1, 0.4, 2.4)
+	other.velocity += away * clampf(impact * 0.25, 1.0, 6.0)
+	velocity -= away * clampf(impact * 0.15, 0.5, 4.0)
+
+
 func _start_wipeout() -> void:
 	if wiped_out_now:
 		return
@@ -317,7 +365,8 @@ func _start_wipeout() -> void:
 	_wobble = 0.0
 	velocity *= 0.5
 	if rider != null:
-		rider.crash()
+		_detach_rider()
+		rider.crash(_fall_side)
 	Audio.play_at("impacts/landing", global_position, 2.0)
 	wiped_out.emit(self)
 
@@ -327,10 +376,32 @@ func _update_wipeout(delta: float) -> void:
 		return
 	_wipeout_timer -= delta
 	if _tilt != null:
-		_lean_roll = move_toward(_lean_roll, -1.45, 4.0 * delta)
+		# The bike tips over during the ejection and is pulled back upright while
+		# the rider braces and lifts it.
+		var rising: bool = rider != null and rider.is_remounting()
+		var target: float = 0.0 if rising else _fall_side * 1.45
+		_lean_roll = move_toward(_lean_roll, target, (1.9 if rising else 3.2) * delta)
 		_tilt.rotation.z = _lean_roll
 	if _wipeout_timer <= 0.0:
 		_remount()
+
+
+func _detach_rider() -> void:
+	var g := rider.global_transform
+	var parent := rider.get_parent()
+	if parent != null:
+		parent.remove_child(rider)
+	add_child(rider)
+	rider.global_transform = g
+
+
+func _attach_rider() -> void:
+	var g := rider.global_transform
+	var parent := rider.get_parent()
+	if parent != null:
+		parent.remove_child(rider)
+	_tilt.add_child(rider)
+	rider.global_transform = g
 
 
 func _remount() -> void:
@@ -342,6 +413,7 @@ func _remount() -> void:
 		_tilt.rotation.z = 0.0
 	if rider != null:
 		rider.recover()
+		_attach_rider()
 	Audio.play_at("ui/unlock", global_position, 0.0)
 	remounted.emit(self)
 
@@ -359,6 +431,9 @@ func _update_lean(delta: float, steer: float, vf: float) -> void:
 	_lean_pitch = lerpf(_lean_pitch, pitch_target, 1.0 - exp(-4.0 * delta))
 	_tilt.rotation.x = _lean_pitch
 	_tilt.rotation.z = _lean_roll
+	if rider != null:
+		rider.set_lean(_lean_roll)
+		rider.set_drive(steer, speed_ratio, nitro_active or _pad_boost_timer > 0.0)
 
 
 func speed_kmh() -> float:
@@ -394,6 +469,17 @@ func add_nitro(amount: float) -> void:
 		Audio.play_at("ui/unlock", global_position, -6.0)
 
 
+## Called by a health pickup ("аптечка") when the bike drives over it: restores
+## part of the health pool, never above the maximum. A wipeout already in
+## progress is not cancelled — it only heals the bike for the remount.
+func add_health(amount: float) -> void:
+	if not control_enabled:
+		return
+	health = clampf(health + amount, 0.0, HEALTH_MAX)
+	if not is_opponent:
+		Audio.play_at("ui/unlock", global_position, -3.0)
+
+
 func _update_nitro(delta: float, request: bool) -> void:
 	if not control_enabled:
 		nitro = def.nitro_max
@@ -401,6 +487,8 @@ func _update_nitro(delta: float, request: bool) -> void:
 		_boost_mult = 1.0
 		_nitro_regen_timer = 0.0
 		_pad_boost_timer = 0.0
+		_draft_mult = 1.0
+		_drafting = false
 		return
 	_pad_boost_timer = maxf(_pad_boost_timer - delta, 0.0)
 	nitro_active = request and nitro > 0.0
@@ -410,12 +498,34 @@ func _update_nitro(delta: float, request: bool) -> void:
 	else:
 		_nitro_regen_timer = maxf(_nitro_regen_timer - delta, 0.0)
 		if _nitro_regen_timer <= 0.0:
-			nitro = move_toward(nitro, def.nitro_max, def.nitro_regen * delta)
+			var rate := def.nitro_regen * (1.0 + (DRAFT_REGEN_BONUS if _drafting else 0.0))
+			nitro = move_toward(nitro, def.nitro_max, rate * delta)
 	var boost_target := def.nitro_speed_mult if (nitro_active or _pad_boost_timer > 0.0) else 1.0
 	if boost_target > 1.0:
 		_boost_mult = move_toward(_boost_mult, boost_target, def.nitro_spool_up * delta)
 	else:
 		_boost_mult = move_toward(_boost_mult, 1.0, def.nitro_spool_down * delta)
+
+
+## True while tucked behind another rider: raises the speed cap and boosts nitro
+## regen. Traffic cars are not draft targets (that is what near-miss is for).
+func _update_draft(delta: float, vf: float) -> void:
+	var found := false
+	if control_enabled and not wiped_out_now and vf > 2.0 and not _offroad_now:
+		for t in combat_targets:
+			if t == self or not is_instance_valid(t) or t.wiped_out_now:
+				continue
+			if t.velocity.length() < DRAFT_MIN_SPEED:
+				continue
+			var local: Vector3 = global_transform.basis.inverse() * (t.global_position - global_position)
+			if local.z > -DRAFT_MIN_GAP or local.z < -DRAFT_RANGE:
+				continue
+			if absf(local.x) > DRAFT_HALF_WIDTH:
+				continue
+			found = true
+			break
+	_drafting = found
+	_draft_mult = move_toward(_draft_mult, DRAFT_MAX_MULT if found else 1.0, DRAFT_SPOOL * delta)
 
 
 func _set_exhaust(active: bool) -> void:
@@ -521,7 +631,7 @@ func _build_visuals() -> void:
 	rider.name = "Rider"
 	rider.position = mount
 	rider.scale = Vector3.ONE * def.rider_scale
-	rider.setup(def.rider_color, def.helmet_color)
+	rider.setup(def.rider_color, def.helmet_color, def)
 	_tilt.add_child(rider)
 
 
@@ -622,18 +732,20 @@ func _slide_audio(delta: float) -> void:
 		var normal := col.get_normal()
 		if normal.y > 0.7:
 			continue  # floor/ramp, not a crash
-		var impact := absf(_pre_slide_velocity.dot(normal))
+		var other := col.get_collider() as RaceBike
+		# Closing speed: bikes travel together, so a gentle touch at racing pace
+		# must not read as a head-on crash. Static walls have no velocity.
+		var rel := _pre_slide_velocity
+		if other != null:
+			rel -= other.velocity
+		var impact := absf(rel.dot(normal))
 		if impact > 6.0:
 			Audio.play_at("impacts/hit_light", global_position)
 			if _sparks != null:
 				_sparks.restart()
 				_sparks.emitting = true
 			_impact_cooldown = 0.4
-			# Traffic cars and rivals hurt; walls hurt less. Very hard hits
-			# throw the rider off (Road Rash wipeout).
-			apply_crash_impact(col.get_collider() as RaceBike, impact)
-			if impact > CRASH_IMPACT_SPEED and control_enabled and not wiped_out_now:
-				_start_wipeout()
+			_resolve_impact(other, normal, impact)
 			break
 
 

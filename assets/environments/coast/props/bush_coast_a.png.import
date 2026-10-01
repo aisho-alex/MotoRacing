@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://flci0r7r1f5e"
 path.s3tc="res://.godot/imported/bush_coast_a.png-da35f0629c5c6b246cb4b6f431de20d6.s3tc.ctex"
+path.etc2="res://.godot/imported/bush_coast_a.png-da35f0629c5c6b246cb4b6f431de20d6.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/coast/props/bush_coast_a.png"
-dest_files=["res://.godot/imported/bush_coast_a.png-da35f0629c5c6b246cb4b6f431de20d6.s3tc.ctex"]
+dest_files=["res://.godot/imported/bush_coast_a.png-da35f0629c5c6b246cb4b6f431de20d6.s3tc.ctex", "res://.godot/imported/bush_coast_a.png-da35f0629c5c6b246cb4b6f431de20d6.etc2.ctex"]
 
 [params]
 

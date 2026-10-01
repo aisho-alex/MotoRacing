@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://878wwfp2jgxy"
 path.s3tc="res://.godot/imported/facade_a.webp-a29b80195e1e6acdfb3c65fa83673820.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_a.webp-a29b80195e1e6acdfb3c65fa83673820.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/volcano/facade_a.webp"
-dest_files=["res://.godot/imported/facade_a.webp-a29b80195e1e6acdfb3c65fa83673820.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_a.webp-a29b80195e1e6acdfb3c65fa83673820.s3tc.ctex", "res://.godot/imported/facade_a.webp-a29b80195e1e6acdfb3c65fa83673820.etc2.ctex"]
 
 [params]
 

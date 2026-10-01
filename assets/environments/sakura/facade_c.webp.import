@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cu7k60yna8vm5"
 path.s3tc="res://.godot/imported/facade_c.webp-0a91c1dc6dcbd3f912e587003535685c.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_c.webp-0a91c1dc6dcbd3f912e587003535685c.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/sakura/facade_c.webp"
-dest_files=["res://.godot/imported/facade_c.webp-0a91c1dc6dcbd3f912e587003535685c.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_c.webp-0a91c1dc6dcbd3f912e587003535685c.s3tc.ctex", "res://.godot/imported/facade_c.webp-0a91c1dc6dcbd3f912e587003535685c.etc2.ctex"]
 
 [params]
 

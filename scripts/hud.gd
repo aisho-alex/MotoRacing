@@ -14,6 +14,10 @@ var _health_bar: ProgressBar
 var _health_fill: StyleBoxFlat
 var _center_big: Label
 var _center_sub: Label
+var _toast_label: Label
+var _record_lap := -1.0
+var _record_race := -1.0
+var _toast_time := 0.0
 
 static var _shared_font: Font = null
 static var _font_lookup_done := false
@@ -81,6 +85,13 @@ func _ready() -> void:
 	_health_fill.set_corner_radius_all(4)
 	_health_bar.add_theme_stylebox_override("fill", _health_fill)
 	speed_box.add_child(_health_bar)
+	# Compact reward toast (near-miss) lives above the nitro gauge instead of
+	# dead center, so a payout never blocks the view of the road.
+	_toast_label = _make_label("", 30)
+	_toast_label.label_settings.font_color = Color(1.0, 0.75, 0.25)
+	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_toast_label.modulate.a = 0.0
+	speed_box.add_child(_toast_label)
 	var nitro_caption := _make_label("NITRO", 26)
 	nitro_caption.label_settings.font_color = Color(1.0, 0.78, 0.28)
 	speed_box.add_child(nitro_caption)
@@ -127,9 +138,39 @@ func set_police(active: bool) -> void:
 
 
 func update_race_info(cur: float, best: float, last: float) -> void:
+	# Before the first completed lap the BEST readout shows the stored track
+	# record, so the player always races against a target.
+	var shown_best := best if best >= 0.0 else _record_lap
 	_time_label.text = "TIME %s" % fmt(cur)
-	_best_label.text = "BEST %s" % fmt(best)
+	_best_label.text = "BEST %s" % fmt(shown_best)
 	_last_label.text = "LAST %s" % fmt(last)
+
+
+## Saved records for the current track/tier, shown while no local lap exists yet.
+func set_record(record_lap: float, record_race: float) -> void:
+	_record_lap = record_lap
+	_record_race = record_race
+
+
+## Short-lived reward toast (near-miss), shown above the nitro gauge so it
+## never covers the center of the screen. Fades out at the end of its life.
+func show_toast(text: String, color := Color.WHITE, sub := "", duration := 1.4) -> void:
+	if _toast_label == null:
+		return
+	var full := text if sub.is_empty() else "%s  %s" % [text, sub]
+	_toast_label.label_settings.font_color = color
+	_toast_label.text = full
+	_toast_label.modulate.a = 1.0
+	_toast_time = duration
+
+
+func _process(delta: float) -> void:
+	if _toast_time > 0.0:
+		_toast_time = maxf(_toast_time - delta, 0.0)
+		if _toast_label != null:
+			_toast_label.modulate.a = clampf(_toast_time / 0.4, 0.0, 1.0)
+			if _toast_time <= 0.0:
+				_toast_label.text = ""
 
 
 func set_speed(kmh: float) -> void:
@@ -178,13 +219,15 @@ func clear_center() -> void:
 	_center_sub.text = ""
 
 
-func show_finish(total: float, best: float, pos: int = 0, credits: int = 0) -> void:
+func show_finish(total: float, best: float, pos: int = 0, credits: int = 0, new_record: bool = false) -> void:
 	_center_big.label_settings.font_color = Color(1.0, 0.85, 0.25)
 	_center_big.text = "FINISH!"
 	var sub := "RACE TIME %s    BEST LAP %s\nPress R to restart — returning to menu" % [fmt(total), fmt(best)]
 	if pos > 0:
 		sub = "POSITION %d/%d\n%s" % [pos, 4, sub]
 	sub = "%s — %s\n%s" % [Game.track_name(), Game.tier_label(), sub]
+	if new_record:
+		sub = "NEW RECORD!\n%s" % sub
 	if credits > 0:
 		sub = "%s\n+%d CREDITS" % [sub, credits]
 	_center_sub.text = sub
@@ -199,6 +242,10 @@ func reset_race() -> void:
 	set_health(1.0)
 	set_police(false)
 	clear_center()
+	_toast_time = 0.0
+	if _toast_label != null:
+		_toast_label.text = ""
+		_toast_label.modulate.a = 0.0
 
 
 static func fmt(t: float) -> String:

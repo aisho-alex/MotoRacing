@@ -32,6 +32,7 @@ func _process(_delta: float) -> bool:
 	failures += _check_knockout_and_remount()
 	failures += _check_kick()
 	failures += _check_crash_damage()
+	failures += _check_rider_bump()
 	failures += _check_ai_hook()
 	failures += _check_ai_grudge()
 	print("RESULT: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
@@ -139,6 +140,7 @@ func _check_crash_damage() -> int:
 	var p := _make_pair(Vector3(1.0, 0.0, 0.0))
 	var a = p[0]
 	var v = p[1]
+	a.is_traffic = true
 	var failures := 0
 	# vehicle hit at 20 m/s -> clampf(12 + 20*1.6, 10, 40) = 40 damage
 	v.apply_crash_impact(a, 20.0)
@@ -167,6 +169,32 @@ func _check_crash_damage() -> int:
 		hits += 1
 	if not v.wiped_out_now:
 		print("crash KO: rider survived %d hits" % hits)
+		failures += 1
+	_free_pair(p)
+	return failures
+
+
+func _check_rider_bump() -> int:
+	var p := _make_pair(Vector3(0.0, 0.0, -2.0))  # v is ahead of a
+	var a = p[0]
+	var v = p[1]
+	var failures := 0
+	var hp: float = v.health
+	var vz: float = v.velocity.z
+	a._resolve_impact(v, Vector3(0.0, 0.0, 1.0), 8.0)
+	if not is_equal_approx(v.health, hp):
+		print("bump: rider-on-rider dealt damage")
+		failures += 1
+	if is_zero_approx(v._wobble):
+		print("bump: victim was not wobbled")
+		failures += 1
+	if v.velocity.z >= vz:
+		print("bump: victim was not nudged forward")
+		failures += 1
+	# even a very hard rear-end must not wipe either rider out
+	a._resolve_impact(v, Vector3(0.0, 0.0, 1.0), 40.0)
+	if a.wiped_out_now or v.wiped_out_now:
+		print("bump: bike contact wiped a rider out")
 		failures += 1
 	_free_pair(p)
 	return failures

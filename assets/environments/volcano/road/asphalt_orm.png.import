@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dg6u45738xorg"
 path.s3tc="res://.godot/imported/asphalt_orm.png-a5341fbb192bf9f000943a9b87c17d2b.s3tc.ctex"
+path.etc2="res://.godot/imported/asphalt_orm.png-a5341fbb192bf9f000943a9b87c17d2b.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/volcano/road/asphalt_orm.png"
-dest_files=["res://.godot/imported/asphalt_orm.png-a5341fbb192bf9f000943a9b87c17d2b.s3tc.ctex"]
+dest_files=["res://.godot/imported/asphalt_orm.png-a5341fbb192bf9f000943a9b87c17d2b.s3tc.ctex", "res://.godot/imported/asphalt_orm.png-a5341fbb192bf9f000943a9b87c17d2b.etc2.ctex"]
 
 [params]
 

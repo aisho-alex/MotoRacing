@@ -5,6 +5,7 @@ extends Control
 var _bike_label: Label
 var _track_label: Label
 var _tier_label: Label
+var _rec_label: Label
 var _hint_label: Label
 var _bank_label: Label
 var _credits_panel: PanelContainer
@@ -65,6 +66,8 @@ func _build_ui() -> void:
 	box.add_child(_picker_row("BIKE", _bike_label, _on_bike_prev, _on_bike_next))
 	box.add_child(_picker_row("TRACK", _track_label, _on_track_prev, _on_track_next))
 	box.add_child(_picker_row("LEVEL", _tier_label, _on_tier_prev, _on_tier_next))
+	_rec_label = _label("", 22, Color(0.55, 0.85, 1.0, 0.9))
+	box.add_child(_rec_label)
 	_hint_label = _label("", 22, Color(1, 1, 1, 0.45))
 	box.add_child(_hint_label)
 	_bank_label = _label("", 24, Color(1.0, 0.85, 0.25, 0.9))
@@ -170,6 +173,7 @@ func _refresh() -> void:
 	_bike_label.text = Game.bike_name()
 	_track_label.text = Game.track_name()
 	_tier_label.text = Game.tier_label()
+	_rec_label.text = Game.record_hint(Game.track_index, Game.track_tier)
 	_hint_label.text = _first_lock_hint()
 	_bank_label.text = "%d CREDITS  —  G garage · Q/E level" % Game.credits
 

@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dpheri2rru5kg"
 path.s3tc="res://.godot/imported/bush_city_a.png-1b3c3b9b30e14454319795e73fe4d8b0.s3tc.ctex"
+path.etc2="res://.godot/imported/bush_city_a.png-1b3c3b9b30e14454319795e73fe4d8b0.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/props/bush_city_a.png"
-dest_files=["res://.godot/imported/bush_city_a.png-1b3c3b9b30e14454319795e73fe4d8b0.s3tc.ctex"]
+dest_files=["res://.godot/imported/bush_city_a.png-1b3c3b9b30e14454319795e73fe4d8b0.s3tc.ctex", "res://.godot/imported/bush_city_a.png-1b3c3b9b30e14454319795e73fe4d8b0.etc2.ctex"]
 
 [params]
 

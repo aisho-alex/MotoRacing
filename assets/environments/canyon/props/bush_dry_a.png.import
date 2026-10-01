@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://ca15ouffuhkr3"
 path.s3tc="res://.godot/imported/bush_dry_a.png-b35998c14e9ca043783d233cac7c8d60.s3tc.ctex"
+path.etc2="res://.godot/imported/bush_dry_a.png-b35998c14e9ca043783d233cac7c8d60.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/canyon/props/bush_dry_a.png"
-dest_files=["res://.godot/imported/bush_dry_a.png-b35998c14e9ca043783d233cac7c8d60.s3tc.ctex"]
+dest_files=["res://.godot/imported/bush_dry_a.png-b35998c14e9ca043783d233cac7c8d60.s3tc.ctex", "res://.godot/imported/bush_dry_a.png-b35998c14e9ca043783d233cac7c8d60.etc2.ctex"]
 
 [params]
 

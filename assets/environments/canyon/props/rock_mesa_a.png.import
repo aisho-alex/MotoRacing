@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dp6w5bwnblndf"
 path.s3tc="res://.godot/imported/rock_mesa_a.png-dc3e3a9476e85120f25f0970d3ffefb8.s3tc.ctex"
+path.etc2="res://.godot/imported/rock_mesa_a.png-dc3e3a9476e85120f25f0970d3ffefb8.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/canyon/props/rock_mesa_a.png"
-dest_files=["res://.godot/imported/rock_mesa_a.png-dc3e3a9476e85120f25f0970d3ffefb8.s3tc.ctex"]
+dest_files=["res://.godot/imported/rock_mesa_a.png-dc3e3a9476e85120f25f0970d3ffefb8.s3tc.ctex", "res://.godot/imported/rock_mesa_a.png-dc3e3a9476e85120f25f0970d3ffefb8.etc2.ctex"]
 
 [params]
 

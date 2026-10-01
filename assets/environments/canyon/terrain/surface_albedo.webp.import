@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bfsc787ain8n8"
 path.s3tc="res://.godot/imported/surface_albedo.webp-fa6ee2c2cead838fdfd1674b5a193d6a.s3tc.ctex"
+path.etc2="res://.godot/imported/surface_albedo.webp-fa6ee2c2cead838fdfd1674b5a193d6a.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/canyon/terrain/surface_albedo.webp"
-dest_files=["res://.godot/imported/surface_albedo.webp-fa6ee2c2cead838fdfd1674b5a193d6a.s3tc.ctex"]
+dest_files=["res://.godot/imported/surface_albedo.webp-fa6ee2c2cead838fdfd1674b5a193d6a.s3tc.ctex", "res://.godot/imported/surface_albedo.webp-fa6ee2c2cead838fdfd1674b5a193d6a.etc2.ctex"]
 
 [params]
 

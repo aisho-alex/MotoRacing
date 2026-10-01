@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dfdl125fl1l23"
 path.s3tc="res://.godot/imported/rock_desert_a.png-61807c2db6a8c3244604e1c5a24d8425.s3tc.ctex"
+path.etc2="res://.godot/imported/rock_desert_a.png-61807c2db6a8c3244604e1c5a24d8425.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/desert/props/rock_desert_a.png"
-dest_files=["res://.godot/imported/rock_desert_a.png-61807c2db6a8c3244604e1c5a24d8425.s3tc.ctex"]
+dest_files=["res://.godot/imported/rock_desert_a.png-61807c2db6a8c3244604e1c5a24d8425.s3tc.ctex", "res://.godot/imported/rock_desert_a.png-61807c2db6a8c3244604e1c5a24d8425.etc2.ctex"]
 
 [params]
 

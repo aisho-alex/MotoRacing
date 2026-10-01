@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://gyjvxoeolrpx"
 path.s3tc="res://.godot/imported/body_1.png-808794a5658d0699859587ae243403c5.s3tc.ctex"
+path.etc2="res://.godot/imported/body_1.png-808794a5658d0699859587ae243403c5.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/bikes/cruiser_01/body_1.png"
-dest_files=["res://.godot/imported/body_1.png-808794a5658d0699859587ae243403c5.s3tc.ctex"]
+dest_files=["res://.godot/imported/body_1.png-808794a5658d0699859587ae243403c5.s3tc.ctex", "res://.godot/imported/body_1.png-808794a5658d0699859587ae243403c5.etc2.ctex"]
 
 [params]
 

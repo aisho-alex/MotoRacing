@@ -18,6 +18,7 @@ const DEFAULT_PATH := "res://assets/data/bikes/sport_01.tres"
 @export var body_color := Color(0.80, 0.14, 0.11)
 @export var accent_color := Color(0.10, 0.10, 0.12)
 @export var rider_color := Color(0.16, 0.18, 0.24)
+@export var rider_accent_color := Color(0.58, 0.61, 0.68)
 @export var helmet_color := Color(0.86, 0.88, 0.92)
 ## Visual lean into corners, degrees (0 disables).
 @export var lean_max := 30.0
@@ -29,6 +30,10 @@ const DEFAULT_PATH := "res://assets/data/bikes/sport_01.tres"
 ## Seated procedural rider mount (bike-local xyz); used with a GLB body.
 @export var rider_mount := Vector3(0.0, 0.80, 0.06)
 @export var rider_scale := 1.0
+## Bike-local handlebar grip / footpeg points the rider's IK reaches for.
+## Vector3.ZERO keeps the per-style default from scripts/rider.gd.
+@export var handlebar_local := Vector3.ZERO
+@export var peg_local := Vector3.ZERO
 @export var collision_size := Vector3(0.85, 1.05, 2.35)
 @export var wheel_radius := 0.33
 @export var livery_dir := ""

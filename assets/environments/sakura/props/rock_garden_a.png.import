@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dv41un2qio5ev"
 path.s3tc="res://.godot/imported/rock_garden_a.png-eac934f4c6a39bb9bd510811d99803f8.s3tc.ctex"
+path.etc2="res://.godot/imported/rock_garden_a.png-eac934f4c6a39bb9bd510811d99803f8.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/sakura/props/rock_garden_a.png"
-dest_files=["res://.godot/imported/rock_garden_a.png-eac934f4c6a39bb9bd510811d99803f8.s3tc.ctex"]
+dest_files=["res://.godot/imported/rock_garden_a.png-eac934f4c6a39bb9bd510811d99803f8.s3tc.ctex", "res://.godot/imported/rock_garden_a.png-eac934f4c6a39bb9bd510811d99803f8.etc2.ctex"]
 
 [params]
 

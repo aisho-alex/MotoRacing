@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://em4uplrlo85o"
 path.s3tc="res://.godot/imported/bush_hedge_a.png-ec4b9b6749fda41a8d113298422fa88a.s3tc.ctex"
+path.etc2="res://.godot/imported/bush_hedge_a.png-ec4b9b6749fda41a8d113298422fa88a.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/props/bush_hedge_a.png"
-dest_files=["res://.godot/imported/bush_hedge_a.png-ec4b9b6749fda41a8d113298422fa88a.s3tc.ctex"]
+dest_files=["res://.godot/imported/bush_hedge_a.png-ec4b9b6749fda41a8d113298422fa88a.s3tc.ctex", "res://.godot/imported/bush_hedge_a.png-ec4b9b6749fda41a8d113298422fa88a.etc2.ctex"]
 
 [params]
 

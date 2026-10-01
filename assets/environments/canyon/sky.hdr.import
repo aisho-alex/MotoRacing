@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://b1ukwnnxn807m"
 path.bptc="res://.godot/imported/sky.hdr-27fa922d918a81e58f244af0738616d7.bptc.ctex"
+path.astc="res://.godot/imported/sky.hdr-27fa922d918a81e58f244af0738616d7.astc.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/canyon/sky.hdr"
-dest_files=["res://.godot/imported/sky.hdr-27fa922d918a81e58f244af0738616d7.bptc.ctex"]
+dest_files=["res://.godot/imported/sky.hdr-27fa922d918a81e58f244af0738616d7.bptc.ctex", "res://.godot/imported/sky.hdr-27fa922d918a81e58f244af0738616d7.astc.ctex"]
 
 [params]
 

@@ -21,19 +21,37 @@
 ## Мотоциклы (Road Rash)
 
 - Гоночный транспорт — **реальные GLB-модели** (Sketchfab CC-BY) в
-  `assets/bikes/<id>/body.glb` + процедурный сидящий райдер:
+  `assets/bikes/<id>/body.glb` + процедурный райдер на **Skeleton3D**:
   `scripts/bike_visuals.gd` (рама/колёса — фолбэк), `scripts/rider.gd`
-  (перс), данные — `BikeDef` в `assets/data/bikes/*.tres`
+  (кости строятся кодом, меши через `BoneAttachment3D`; посадка и позы —
+  2-костный IK), данные — `BikeDef` в `assets/data/bikes/*.tres`
   (`model_path`, `model_yaw`, `rider_mount`). Пайплайн моделей —
   `tools/assetgen/process_bike.py` (+ `normalize_bike.py`).
+- Райдер: посадка по `BikeDef.style` (sport/super — наклон вперёд, cruiser —
+  отвесно), руки тянутся IK к рулю, ноги — к подножкам. Точки задаются
+  `BikeDef.handlebar_local`/`peg_local` (bike-local; `Vector3.ZERO` = дефолт
+  стиля из `RIDER_STYLES`). Рантайм-динамика (`set_drive`): наклон головы в
+  поворот, вибрация от скорости, тюк на нитро; удары — 3-фазные (замах →
+  выпад), крэш — кувырок с разлётом. Скриншоты поз — `tools/rider_shot.gd`
+  (`xvfb-run`, env `BIKE`, `POSE=idle|punch|kick|crash`, `AZ`, `ELEV`, `DIST`);
+  headless-проверка рига/IK — `tools/check_rider.gd` (PASS).
 - Ростер: `scrambler_01`, `sport_01`, `cruiser_01`, `super_01`, коп `cop_01`.
   Наклон/вилли — узел `Tilt` (bike-space), `BikeDef.lean_max`. Колёса
   крутятся, если у GLB есть ноды `wheel`/`tyre` (иначе статичны).
 - Бой (Road Rash): Q/E — удар влево/вправо, F — пинок; здоровье в HUD,
-  нокдаун → вайпаут (байк падает, райдер кувыркается) → возврат через 3 с.
+  нокдаун → вайпаут → возврат через 4.2 с. Вайпаут — фазовый цикл райдера
+  (`rider.gd`: eject → getup → run → lift → mount): райдер вылетает с байка,
+  встаёт, бежит к нему, поднимает и садится. На вайпауте `Rider` временно
+  перепарентен из `Tilt` в `RaceBike` (тело физики вертикально), `_tilt`
+  валится/встаёт синхронно с фазой (`rider.is_remounting()`). Скриншоты фаз —
+  `tools/bike_close_shot.gd` (`POSE=eject|getup|run|lift|mount`).
   Логика в `scripts/race_bike.gd` (+ `rider.gd`), AI-агрессия — `AiDriver.decide_attack`.
 - Урон: удары, а также столкновения (в машину — 10–40 по скорости, в стену —
-  6–25; impact считается по скорости ДО `move_and_slide`, иначе dot≈0).
+  6–25; impact считается по **относительной** скорости ДО `move_and_slide`).
+  Байк-в-байк (соперник/коп) урона не наносит: `_apply_bump` толкает жертву
+  (wobble + сдвиг), вайпаут только от ударов. Трафик (`is_traffic`) и стены —
+  жёсткие. Быстрые байки едут почти вровень, поэтому абсолютная скорость давала
+  ложный «импакт» 26+ → мгновенный вайпаут при догоне (`_resolve_impact`).
   ИИ-соперничество: резинка ±10% (`main.gd`), обгон на скорости
   (`AiDriver._blocker_much_slower`), мщение атакующему 4 с (`grudge`).
 - Полиция (`scripts/police.gd`): коп появляется с задержкой (`POLICE_DELAY` env

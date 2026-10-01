@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://6q1i026ue3tp"
 path.s3tc="res://.godot/imported/tree_juniper_a.png-910a48179caa8c0c968f3c4e0d16f564.s3tc.ctex"
+path.etc2="res://.godot/imported/tree_juniper_a.png-910a48179caa8c0c968f3c4e0d16f564.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/canyon/props/tree_juniper_a.png"
-dest_files=["res://.godot/imported/tree_juniper_a.png-910a48179caa8c0c968f3c4e0d16f564.s3tc.ctex"]
+dest_files=["res://.godot/imported/tree_juniper_a.png-910a48179caa8c0c968f3c4e0d16f564.s3tc.ctex", "res://.godot/imported/tree_juniper_a.png-910a48179caa8c0c968f3c4e0d16f564.etc2.ctex"]
 
 [params]
 

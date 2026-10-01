@@ -67,6 +67,8 @@ func _ready() -> void:
 	hud.name = "Hud"
 	add_child(hud)
 	hud.reset_race()
+	hud.set_record(Game.best_lap_at(Game.track_index, Game.track_tier),
+			Game.best_race_at(Game.track_index, Game.track_tier))
 	hud.show_countdown(3)
 
 	bike.wiped_out.connect(_on_player_wipeout)
@@ -86,6 +88,7 @@ func _ready() -> void:
 	traffic.name = "Traffic"
 	add_child(traffic)
 	traffic.setup(track, bike)
+	traffic.near_miss.connect(_on_near_miss)
 
 	add_child(TouchControls.new())
 
@@ -250,6 +253,8 @@ func _on_player_remount(_bike: RaceBike) -> void:
 func _on_lap_finished(lap_time: float, best: float) -> void:
 	Audio.play_ui("lap")
 	hud.update_race_info(tracker.lap_time, best, lap_time)
+	if Game.record_lap(Game.track_index, Game.track_tier, lap_time):
+		hud.show_toast("NEW LAP RECORD!", Color(1.0, 0.85, 0.25), Hud.fmt(lap_time), 1.5)
 
 
 func _on_race_finished(total: float) -> void:
@@ -259,9 +264,11 @@ func _on_race_finished(total: float) -> void:
 	traffic.stop()
 	var pos := _player_position()
 	var earned := Game.record_result(true, pos)
+	var new_lap := Game.record_lap(Game.track_index, Game.track_tier, tracker.best_lap)
+	var new_race := Game.record_race(Game.track_index, Game.track_tier, total)
 	_burst_confetti()
 	Audio.play_ui("finish")
-	hud.show_finish(total, tracker.best_lap, pos, earned)
+	hud.show_finish(total, tracker.best_lap, pos, earned, new_lap or new_race)
 	get_tree().create_timer(MENU_RETURN_DELAY).timeout.connect(_return_to_menu)
 
 
@@ -282,6 +289,14 @@ func _on_busted() -> void:
 func _on_cop_down(bonus: int) -> void:
 	Game.add_credits(bonus)
 	hud.show_message("COP DOWN!", Color(0.45, 0.85, 1.0), "+%d CREDITS" % bonus)
+
+
+## Clean pass by a traffic car: nitro reward, doubled on a 3-pass chain.
+func _on_near_miss(chain: int, reward: float) -> void:
+	var title := "NEAR MISS!"
+	if chain >= TrafficManager.NM_CHAIN_TARGET:
+		title = "NEAR MISS ×%d!" % (1 + chain / TrafficManager.NM_CHAIN_TARGET)
+	hud.show_toast(title, Color(1.0, 0.75, 0.25), "+%d NITRO" % int(reward), 1.1)
 
 
 ## Returns to the menu after the finish screen. The timer cannot be cancelled,

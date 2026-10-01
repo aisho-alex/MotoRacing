@@ -30,12 +30,14 @@ func _run() -> void:
 		push_error("no " + node_name)
 		quit(1)
 		return
-	# optional combat pose for inspection: POSE=punch|kick|crash
+	# optional combat/wipeout pose for inspection: POSE=punch|kick|crash|eject|getup|run|lift|mount
 	var pose := OS.get_environment("POSE")
 	if pose != "":
-		if pose == "crash":
+		var wipe_pose := {"crash": 0.7, "eject": 0.45, "getup": 1.05, "run": 1.9,
+			"lift": 2.9, "mount": 3.7}
+		if wipe_pose.has(pose):
 			bike._start_wipeout()
-			await create_timer(0.7).timeout
+			await create_timer(float(wipe_pose[pose])).timeout
 		elif pose == "kick":
 			bike.rider.attack(-1.0, "kick")
 			await create_timer(0.16).timeout

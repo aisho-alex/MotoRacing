@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bbewamhnuwp33"
 path.s3tc="res://.godot/imported/surface_orm.png-c258bd308a80a4ac2ce1aae8fb9a9658.s3tc.ctex"
+path.etc2="res://.godot/imported/surface_orm.png-c258bd308a80a4ac2ce1aae8fb9a9658.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/canyon/terrain/surface_orm.png"
-dest_files=["res://.godot/imported/surface_orm.png-c258bd308a80a4ac2ce1aae8fb9a9658.s3tc.ctex"]
+dest_files=["res://.godot/imported/surface_orm.png-c258bd308a80a4ac2ce1aae8fb9a9658.s3tc.ctex", "res://.godot/imported/surface_orm.png-c258bd308a80a4ac2ce1aae8fb9a9658.etc2.ctex"]
 
 [params]
 

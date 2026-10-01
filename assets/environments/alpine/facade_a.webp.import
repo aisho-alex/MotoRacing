@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://smtfs773p1a3"
 path.s3tc="res://.godot/imported/facade_a.webp-267bbee11c34e310624d64f356ee7285.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_a.webp-267bbee11c34e310624d64f356ee7285.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/alpine/facade_a.webp"
-dest_files=["res://.godot/imported/facade_a.webp-267bbee11c34e310624d64f356ee7285.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_a.webp-267bbee11c34e310624d64f356ee7285.s3tc.ctex", "res://.godot/imported/facade_a.webp-267bbee11c34e310624d64f356ee7285.etc2.ctex"]
 
 [params]
 

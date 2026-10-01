@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://de4orh4taw67e"
 path.s3tc="res://.godot/imported/surface_albedo.webp-f38fb9cb8a34b431c732002441bcb6f1.s3tc.ctex"
+path.etc2="res://.godot/imported/surface_albedo.webp-f38fb9cb8a34b431c732002441bcb6f1.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/desert/terrain/surface_albedo.webp"
-dest_files=["res://.godot/imported/surface_albedo.webp-f38fb9cb8a34b431c732002441bcb6f1.s3tc.ctex"]
+dest_files=["res://.godot/imported/surface_albedo.webp-f38fb9cb8a34b431c732002441bcb6f1.s3tc.ctex", "res://.godot/imported/surface_albedo.webp-f38fb9cb8a34b431c732002441bcb6f1.etc2.ctex"]
 
 [params]
 

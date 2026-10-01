@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c26vuhrvw1crh"
 path.s3tc="res://.godot/imported/surface_albedo.webp-900c86fb6c9e9fe3773ec407638f8091.s3tc.ctex"
+path.etc2="res://.godot/imported/surface_albedo.webp-900c86fb6c9e9fe3773ec407638f8091.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/coast/terrain/surface_albedo.webp"
-dest_files=["res://.godot/imported/surface_albedo.webp-900c86fb6c9e9fe3773ec407638f8091.s3tc.ctex"]
+dest_files=["res://.godot/imported/surface_albedo.webp-900c86fb6c9e9fe3773ec407638f8091.s3tc.ctex", "res://.godot/imported/surface_albedo.webp-900c86fb6c9e9fe3773ec407638f8091.etc2.ctex"]
 
 [params]
 

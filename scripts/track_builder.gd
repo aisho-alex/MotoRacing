@@ -18,7 +18,13 @@ const PAD_COUNT := 5
 const PAD_COLLISION_HEIGHT := 1.6
 ## Nitro pickups ("бутылочки"): rotating bottles that instantly refill part of
 ## the bike's nitro tank when driven over (player and AI both collect them).
-const NITRO_BOTTLE_COUNT := 12
+const NITRO_BOTTLE_COUNT := 8
+## Repair packs ("аптечки"): fewer than nitro bottles, so healing is a real
+## decision rather than a constant stream.
+const HEALTH_PACK_COUNT := 5
+## Preloaded so headless tools work even before the editor refreshes the global
+## class cache with the new script.
+const HealthPickupScript := preload("res://scripts/health_pickup.gd")
 ## Keep bottles this many samples away from a boost pad so both reads stay clean.
 const NITRO_PICKUP_AVOID_PAD := 26
 ## Curb kit (Kenney "City Kit (Roads)", CC0): one 1 m one-sided curb segment
@@ -123,6 +129,7 @@ func build() -> void:
 		add_child(_make_street_lights())
 	add_child(_make_boost_pads())
 	add_child(_make_nitro_pickups())
+	add_child(_make_health_pickups())
 	if def.wet_road:
 		add_child(_make_reflection_probes())
 
@@ -821,6 +828,48 @@ func _make_nitro_pickups() -> Node3D:
 	return root
 
 
+## Even arc-length spread of sample indices for repair packs, avoiding the
+## boost pads and the nitro bottles so each pickup stays a distinct read.
+func _make_health_pickups() -> Node3D:
+	var root := Node3D.new()
+	root.name = "HealthPickups"
+	var rng := RandomNumberGenerator.new()
+	rng.seed = def.decor_seed ^ 0x51A7
+	var max_offset := maxf(def.road_half_width - 1.3, 0.0)
+	for idx in _pick_health_spots(HEALTH_PACK_COUNT):
+		var pickup := HealthPickupScript.new()
+		pickup.name = "HealthPack"
+		var offset := rng.randf_range(-1.0, 1.0) * max_offset
+		pickup.position = centerline[idx] + side_vector(idx) * offset + Vector3.UP * ROAD_Y
+		pickup.rotation.y = rng.randf() * TAU
+		root.add_child(pickup)
+	return root
+
+
+func _pick_health_spots(count: int) -> Array[int]:
+	var n := sample_count()
+	if n < 2:
+		return []
+	var pads := _pick_pad_spots(PAD_COUNT)
+	# taken starts with the nitro bottles so a pack never shares their slot
+	var taken := _pick_bottle_spots(NITRO_BOTTLE_COUNT).duplicate()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = def.decor_seed ^ 0x3C0D
+	var total := _arc[n - 1] + centerline[n - 1].distance_to(centerline[0])
+	var spots: Array[int] = []
+	for k in count:
+		var target := total * (float(k) + 0.5) / float(count)
+		var i := 0
+		while i < n - 1 and _arc[i] < target:
+			i += 1
+		i = clampi(i + rng.randi_range(-3, 3), 60, n - 12)
+		var spot := _free_bottle_spot(i, pads, taken)
+		if spot >= 0:
+			spots.append(spot)
+			taken.append(spot)
+	return spots
+
+
 ## Even arc-length spread of sample indices for nitro bottles, kept off the start
 ## straight and away from the boost pads. A small per-slot jitter (seeded) keeps
 ## laps from feeling identical without clustering bottles together; if a slot is
@@ -866,14 +915,15 @@ func _free_bottle_spot(start: int, pads: Array[int], taken: Array[int]) -> int:
 	return -1
 
 
-## Restores every collected nitro bottle (called on race restart).
+## Restores every collected pickup (called on race restart).
 func reset_pickups() -> void:
-	var root := get_node_or_null("NitroPickups")
-	if root == null:
-		return
-	for pickup in root.get_children():
-		if pickup.has_method("reset"):
-			pickup.call("reset")
+	for group_name in ["NitroPickups", "HealthPickups"]:
+		var root := get_node_or_null(group_name)
+		if root == null:
+			continue
+		for pickup in root.get_children():
+			if pickup.has_method("reset"):
+				pickup.call("reset")
 
 
 ## Dark pad plate plus three glowing chevrons pointing along travel (local -Z).

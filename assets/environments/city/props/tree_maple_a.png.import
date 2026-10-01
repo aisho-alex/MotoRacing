@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bx2h00iyeq7gu"
 path.s3tc="res://.godot/imported/tree_maple_a.png-b43b99636e8adccdbf647833bfd67306.s3tc.ctex"
+path.etc2="res://.godot/imported/tree_maple_a.png-b43b99636e8adccdbf647833bfd67306.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/props/tree_maple_a.png"
-dest_files=["res://.godot/imported/tree_maple_a.png-b43b99636e8adccdbf647833bfd67306.s3tc.ctex"]
+dest_files=["res://.godot/imported/tree_maple_a.png-b43b99636e8adccdbf647833bfd67306.s3tc.ctex", "res://.godot/imported/tree_maple_a.png-b43b99636e8adccdbf647833bfd67306.etc2.ctex"]
 
 [params]
 

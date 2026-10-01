@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://b1fwcj34hhroa"
 path.s3tc="res://.godot/imported/tree_birch_a.png-a75d9554b250632501d88d8886f3c6fe.s3tc.ctex"
+path.etc2="res://.godot/imported/tree_birch_a.png-a75d9554b250632501d88d8886f3c6fe.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/props/tree_birch_a.png"
-dest_files=["res://.godot/imported/tree_birch_a.png-a75d9554b250632501d88d8886f3c6fe.s3tc.ctex"]
+dest_files=["res://.godot/imported/tree_birch_a.png-a75d9554b250632501d88d8886f3c6fe.s3tc.ctex", "res://.godot/imported/tree_birch_a.png-a75d9554b250632501d88d8886f3c6fe.etc2.ctex"]
 
 [params]
 

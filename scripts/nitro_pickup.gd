@@ -4,7 +4,7 @@ extends Area3D
 ## the tank (player and AI both collect); the bottle then hides for a while and
 ## respawns.
 
-const AMOUNT := 35.0
+const AMOUNT := 30.0
 const RESPAWN_TIME := 15.0
 const BOB_HEIGHT := 0.16
 const SPIN_SPEED := 1.6

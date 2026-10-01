@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bpy3r78vy5j0l"
 path.s3tc="res://.godot/imported/surface_albedo.webp-3f93b6491bad9bafb3b7e99ad9ce86f4.s3tc.ctex"
+path.etc2="res://.godot/imported/surface_albedo.webp-3f93b6491bad9bafb3b7e99ad9ce86f4.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/sakura/terrain/surface_albedo.webp"
-dest_files=["res://.godot/imported/surface_albedo.webp-3f93b6491bad9bafb3b7e99ad9ce86f4.s3tc.ctex"]
+dest_files=["res://.godot/imported/surface_albedo.webp-3f93b6491bad9bafb3b7e99ad9ce86f4.s3tc.ctex", "res://.godot/imported/surface_albedo.webp-3f93b6491bad9bafb3b7e99ad9ce86f4.etc2.ctex"]
 
 [params]
 

@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dnwifk1lk44hp"
 path.s3tc="res://.godot/imported/facade_b_orm.png-6a31da9fd892fcfbc0d54365a10d0a23.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_b_orm.png-6a31da9fd892fcfbc0d54365a10d0a23.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/city/facade_b_orm.png"
-dest_files=["res://.godot/imported/facade_b_orm.png-6a31da9fd892fcfbc0d54365a10d0a23.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_b_orm.png-6a31da9fd892fcfbc0d54365a10d0a23.s3tc.ctex", "res://.godot/imported/facade_b_orm.png-6a31da9fd892fcfbc0d54365a10d0a23.etc2.ctex"]
 
 [params]
 

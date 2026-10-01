@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://d1ah5mgcghsv3"
 path.s3tc="res://.godot/imported/facade_b.webp-4761d52e53b6ca6668d4fc70a638d0b4.s3tc.ctex"
+path.etc2="res://.godot/imported/facade_b.webp-4761d52e53b6ca6668d4fc70a638d0b4.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/environments/desert/facade_b.webp"
-dest_files=["res://.godot/imported/facade_b.webp-4761d52e53b6ca6668d4fc70a638d0b4.s3tc.ctex"]
+dest_files=["res://.godot/imported/facade_b.webp-4761d52e53b6ca6668d4fc70a638d0b4.s3tc.ctex", "res://.godot/imported/facade_b.webp-4761d52e53b6ca6668d4fc70a638d0b4.etc2.ctex"]
 
 [params]
 

@@ -22,6 +22,7 @@ var credits := 0
 var upgrades := {}  # bike_id -> {engine, tires, nitro}
 var unlocked_tracks := 1  # ladder prefix: tracks [0, unlocked_tracks) are open
 var track_tiers := {}  # track_id -> number of unlocked difficulty tiers (1..3)
+var records := {}  # "track_id:tier" -> {"lap": best_lap, "race": best_race} (-1 = unset)
 
 
 func _ready() -> void:
@@ -118,6 +119,73 @@ func track_lock_hint(index: int) -> String:
 func tier_label(tier: int = -1) -> String:
 	var t := track_tier if tier < 0 else tier
 	return "LEVEL %d/%d" % [t + 1, BikeTuning.TRACK_TIERS]
+
+
+## --- Track records (best lap / full-race time per track + difficulty tier) ---
+
+## Stored best lap on a track/tier, or -1.0 when none is set yet.
+func best_lap_at(track_index_ref: int, tier: int) -> float:
+	return float(_record_at(track_index_ref, tier).get("lap", -1.0))
+
+
+## Stored best full-race time (all laps) on a track/tier, or -1.0 when none.
+func best_race_at(track_index_ref: int, tier: int) -> float:
+	return float(_record_at(track_index_ref, tier).get("race", -1.0))
+
+
+## Records a lap time; returns true when it beats the stored best. Persists.
+func record_lap(track_index_ref: int, tier: int, lap_time: float) -> bool:
+	if lap_time <= 0.0 or _record_key(track_index_ref, tier) == "":
+		return false
+	var rec := _record_at(track_index_ref, tier)
+	var prev := float(rec.get("lap", -1.0))
+	if prev > 0.0 and lap_time >= prev:
+		return false
+	rec["lap"] = lap_time
+	_store_record(track_index_ref, tier, rec)
+	return true
+
+
+## Records a full-race time; returns true when it beats the stored best. Persists.
+func record_race(track_index_ref: int, tier: int, race_time: float) -> bool:
+	if race_time <= 0.0 or _record_key(track_index_ref, tier) == "":
+		return false
+	var rec := _record_at(track_index_ref, tier)
+	var prev := float(rec.get("race", -1.0))
+	if prev > 0.0 and race_time >= prev:
+		return false
+	rec["race"] = race_time
+	_store_record(track_index_ref, tier, rec)
+	return true
+
+
+## One-line record summary for the menu (or "no record" when both are unset).
+func record_hint(track_index_ref: int, tier: int) -> String:
+	var lap := best_lap_at(track_index_ref, tier)
+	var race := best_race_at(track_index_ref, tier)
+	if lap <= 0.0 and race <= 0.0:
+		return "no record"
+	return "REC  LAP %s · RACE %s" % [Hud.fmt(lap), Hud.fmt(race)]
+
+
+func _record_at(track_index_ref: int, tier: int) -> Dictionary:
+	var key := _record_key(track_index_ref, tier)
+	if key == "":
+		return {}
+	return records.get(key, {})
+
+
+func _record_key(track_index_ref: int, tier: int) -> String:
+	if track_index_ref < 0 or track_index_ref >= TRACK_IDS.size():
+		return ""
+	if tier < 0 or tier >= BikeTuning.TRACK_TIERS:
+		return ""
+	return "%s:%d" % [TRACK_IDS[track_index_ref], tier]
+
+
+func _store_record(track_index_ref: int, tier: int, rec: Dictionary) -> void:
+	records[_record_key(track_index_ref, tier)] = rec
+	_save_progress()
 
 
 func cycle_track(dir: int) -> void:
@@ -260,6 +328,20 @@ func _load_progress() -> void:
 	track_tiers = {}
 	for id in TRACK_IDS:
 		track_tiers[id] = clampi(int(cfg.get_value("tracks", id, 1)), 1, BikeTuning.TRACK_TIERS)
+	records = {}
+	for id in TRACK_IDS:
+		for t in BikeTuning.TRACK_TIERS:
+			var key := "%s:%d" % [id, t]
+			var saved_rec: Variant = cfg.get_value("records", key, {})
+			if not (saved_rec is Dictionary) or (saved_rec as Dictionary).is_empty():
+				continue
+			var lap := float((saved_rec as Dictionary).get("lap", -1.0))
+			var race := float((saved_rec as Dictionary).get("race", -1.0))
+			if lap > 0.0 or race > 0.0:
+				records[key] = {
+					"lap": lap if lap > 0.0 else -1.0,
+					"race": race if race > 0.0 else -1.0,
+				}
 	track_index = clampi(track_index, 0, unlocked_tracks - 1)
 	track_tier = clampi(int(cfg.get_value("progress", "track_tier", 0)), 0, unlocked_tier_count(track_index) - 1)
 
@@ -277,4 +359,6 @@ func _save_progress() -> void:
 		cfg.set_value("upgrades", id, upgrade_levels(id))
 	for id in TRACK_IDS:
 		cfg.set_value("tracks", id, int(track_tiers.get(id, 1)))
+	for key in records:
+		cfg.set_value("records", key, records[key])
 	cfg.save(SAVE_PATH)
