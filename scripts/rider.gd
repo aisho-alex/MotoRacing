@@ -715,11 +715,9 @@ func _sphere_mesh(radius: float, mat: Material) -> SphereMesh:
 	return m
 
 
-func _mat(c: Color, rough: float) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = c
-	m.roughness = rough
-	return m
+func _mat(c: Color, _rough: float) -> Material:
+	# Flat cel shading with a thin inverse-hull contour (see scripts/toon_material.gd).
+	return ToonMaterial.make(c, null, ToonMaterial.OUTLINE_WIDTH_LIMB)
 
 
 func _plane_mesh(w: float, h: float, mat: Material) -> PlaneMesh:

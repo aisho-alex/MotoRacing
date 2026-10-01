@@ -189,8 +189,10 @@ static func _build_body(holder: Node3D, def: BikeDef, cfg: Dictionary) -> void:
 		sm.position = Vector3(0.0, grip.y + 0.12, grip.z - 0.04)
 		holder.add_child(sm)
 
-	# headlight
-	var hl := _mat(HEADLIGHT, 0.2, 0.1)
+	# headlight: emissive (toon shader has no emission, so keep it standard)
+	var hl := StandardMaterial3D.new()
+	hl.albedo_color = HEADLIGHT
+	hl.roughness = 0.2
 	hl.emission_enabled = true
 	hl.emission = HEADLIGHT
 	hl.emission_energy_multiplier = 1.6
@@ -225,12 +227,9 @@ static func _build_body(holder: Node3D, def: BikeDef, cfg: Dictionary) -> void:
 		holder.add_child(pm)
 
 
-static func _mat(c: Color, rough: float, metal: float) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = c
-	m.roughness = rough
-	m.metallic = metal
-	return m
+static func _mat(c: Color, _rough: float, _metal: float) -> Material:
+	# Flat cel shading with an inverse-hull contour (scripts/toon_material.gd).
+	return ToonMaterial.make(c, null, ToonMaterial.OUTLINE_WIDTH_BODY)
 
 
 static func _box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:

@@ -18,6 +18,18 @@
 /media/alexander/data/Godot_v4.7.2-stable_linux.x86_64 --headless --path . -s tools/check_buildings.gd
 ```
 
+## Графика / стиль
+
+- Аркадный cel-стиль актёров (райдер, байки, трафик): `assets/shaders/toon.gdshader`
+  (3-тоновый half-lambert + rim) + `assets/shaders/toon_outline.gdshader`
+  (inverse-hull обводка как `next_pass`); фабрика — `scripts/toon_material.gd`
+  (цвета/liveries остаются данными). Трафик — без обводки (8 машин).
+- Резкость: `project.godot` — MSAA 4x, anisotropic 16, `texture_mipmap_bias=-0.35`.
+- Свет/грейдинг — `main.gd _build_environment()`: солнце 4-сплит PSSM, резкие
+  тени; день — LINEAR-тонмаппинг, насыщенность 1.22, лёгкий туман; ночь (если
+  включена) — ACES чуть светлее. Небо Сити — дневное (`gen_sky.py` → `CITY`);
+  `CITY_NIGHT` зарезервирован под будущие ночные city-трассы.
+
 ## Мотоциклы (Road Rash)
 
 - Гоночный транспорт — **реальные GLB-модели** (Sketchfab CC-BY) в

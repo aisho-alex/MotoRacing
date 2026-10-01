@@ -652,6 +652,7 @@ func _build_visuals() -> void:
 				_tilt.add_child(holder)
 				_collect_wheels(model)
 				_apply_livery(model)
+				_apply_toon(model)
 	if holder == null:
 		if def.model_path != "":
 			push_warning("Bike model missing/not a PackedScene: %s" % def.model_path)
@@ -747,24 +748,34 @@ func _apply_livery(root: Node) -> void:
 	if albedo == null:
 		push_warning("Livery not found: %s" % def.livery_path(def.livery_index))
 		return
-	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = albedo
-	var normal := _load_tex("%s/normal.png" % def.livery_dir)
-	if normal != null:
-		mat.normal_enabled = true
-		mat.normal_texture = normal
-	var orm := _load_tex("%s/orm.png" % def.livery_dir)
-	if orm != null:
-		mat.ao_enabled = true
-		mat.ao_texture = orm
-		mat.roughness_texture = orm
-		mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
-		mat.metallic_texture = orm
-		mat.metallic_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_BLUE
-		mat.roughness = 1.0
-		mat.metallic = 1.0
+	var mat := ToonMaterial.make(Color.WHITE, albedo, _outline_width())
 	for mi in _find_mesh_instances(root):
 		mi.material_override = mat
+
+
+## Converts any imported GLB surfaces that were not given a livery into toon
+## materials, so procedurally-built and modelled actors share one look.
+func _apply_toon(root: Node) -> void:
+	var width := _outline_width()
+	for mi in _find_mesh_instances(root):
+		if mi.material_override != null:
+			continue
+		var mesh := mi.mesh
+		if mesh == null:
+			continue
+		for i in mesh.get_surface_count():
+			var src := mi.get_surface_override_material(i)
+			if src == null:
+				src = mesh.surface_get_material(i)
+			var base := src as BaseMaterial3D
+			mi.set_surface_override_material(i, ToonMaterial.from_base(base, width))
+
+
+## Traffic cars skip the outline (8 of them on screen would double draw calls).
+func _outline_width() -> float:
+	if is_traffic:
+		return -1.0
+	return ToonMaterial.OUTLINE_WIDTH_BODY
 
 
 ## One-shot sounds for wall hits and hard landings; silent while the samples
@@ -957,12 +968,6 @@ func _build_exhaust() -> void:
 	p.draw_pass_1 = mesh
 	add_child(p)
 	_exhaust.append(p)
-
-
-static func _load_tex(path: String) -> Texture2D:
-	if ResourceLoader.exists(path):
-		return load(path) as Texture2D
-	return null
 
 
 static func _find_mesh_instances(root: Node) -> Array[MeshInstance3D]:

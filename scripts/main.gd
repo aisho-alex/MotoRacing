@@ -387,8 +387,15 @@ func _build_environment(tdef: TrackDef) -> void:
 		sun.light_specular = 0.35
 	else:
 		sun.rotation_degrees = Vector3(-52.0, -35.0, 0.0)
-		sun.light_energy = 1.25
+		sun.light_energy = 1.4
 	sun.shadow_enabled = true
+	# Crisper, longer shadows: 4-split PSSM with a small blur reads as a clean
+	# arcade look instead of a soft photoreal falloff.
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.directional_shadow_max_distance = 140.0
+	sun.directional_shadow_blend_splits = true
+	sun.shadow_blur = 0.6
+	sun.shadow_opacity = 0.9
 	add_child(sun)
 
 	var we := WorldEnvironment.new()
@@ -417,16 +424,16 @@ func _build_environment(tdef: TrackDef) -> void:
 	env.glow_enabled = true
 	env.adjustment_enabled = true
 	if tdef.night_racing:
-		env.background_energy_multiplier = 0.70
-		env.ambient_light_energy = 0.102
+		env.background_energy_multiplier = 0.85
+		env.ambient_light_energy = 0.16
 		env.ambient_light_sky_contribution = 0.50
 		env.tonemap_mode = Environment.TONE_MAPPER_ACES
 		env.tonemap_white = 4.0
-		env.tonemap_exposure = 1.10
+		env.tonemap_exposure = 1.18
 		env.fog_enabled = true
 		env.fog_light_color = Color(0.022, 0.034, 0.075)
 		env.fog_light_energy = 0.85
-		env.fog_density = 0.0042
+		env.fog_density = 0.0036
 		env.fog_sky_affect = 0.10
 		env.fog_aerial_perspective = 0.30
 		env.fog_height = 2.0
@@ -440,7 +447,7 @@ func _build_environment(tdef: TrackDef) -> void:
 		env.glow_bloom = 0.035
 		env.adjustment_brightness = 1.0
 		env.adjustment_contrast = 1.08
-		env.adjustment_saturation = 1.12
+		env.adjustment_saturation = 1.18
 		env.ssao_enabled = true
 		env.ssao_radius = 2.2
 		env.ssao_intensity = 1.75
@@ -472,14 +479,20 @@ func _build_environment(tdef: TrackDef) -> void:
 		env.volumetric_fog_ambient_inject = 0.20
 		env.volumetric_fog_sky_affect = 0.22
 	else:
-		env.ambient_light_energy = 1.0
-		env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		env.background_energy_multiplier = 1.1
+		env.ambient_light_energy = 1.15
+		# LINEAR tonemapping keeps the flat, punchy, cartoon-bright look.
+		env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+		env.tonemap_white = 4.0
+		env.tonemap_exposure = 0.95
 		env.fog_enabled = true
-		env.fog_light_color = Color(0.65, 0.72, 0.82)
-		env.fog_density = 0.004
-		env.fog_sky_affect = 0.2
-		env.glow_intensity = 0.4
-		env.glow_bloom = 0.05
-		env.adjustment_saturation = 1.08
+		env.fog_light_color = Color(0.72, 0.80, 0.90)
+		env.fog_density = 0.002
+		env.fog_sky_affect = 0.08
+		env.glow_intensity = 0.3
+		env.glow_bloom = 0.04
+		env.adjustment_brightness = 1.03
+		env.adjustment_contrast = 1.04
+		env.adjustment_saturation = 1.22
 	we.environment = env
 	add_child(we)

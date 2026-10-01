@@ -92,4 +92,6 @@ kick={
 [rendering]
 
 textures/vram_compression/import_etc2_astc=true
+textures/default_filters/anisotropic_filtering_level=16
+textures/default_filters/texture_mipmap_bias=-0.35
 anti_aliasing/quality/msaa_3d=2

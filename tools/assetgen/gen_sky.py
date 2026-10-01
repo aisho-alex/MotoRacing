@@ -129,10 +129,12 @@ def _to_rgbe(rgb: np.ndarray) -> np.ndarray:
 
 
 def main() -> None:
-    rgb = render(CITY_NIGHT)
+    # City tracks are day races (night_racing is off), so use the bright noon
+    # palette. CITY_NIGHT stays available for a future night city.
+    rgb = render(CITY)
     out = asset_path("environments/city/sky.hdr")
     save_hdr(out, rgb)
-    write_license(out + ".license", "sky.hdr", TOOL, "analytic night gradient + moon, RGBE")
+    write_license(out + ".license", "sky.hdr", TOOL, "analytic noon gradient + sun, RGBE")
     print(f"gen_sky: ok (max={rgb.max():.1f})")
     for biome, palette in EXTRA_SKIES.items():
         rgb = render(palette)
