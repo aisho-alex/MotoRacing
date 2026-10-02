@@ -24,6 +24,12 @@
   (3-тоновый half-lambert + rim) + `assets/shaders/toon_outline.gdshader`
   (inverse-hull обводка как `next_pass`); фабрика — `scripts/toon_material.gd`
   (цвета/liveries остаются данными). Трафик — без обводки (8 машин).
+- Текстуры мира — тот же flat-cel стиль: дороги процедурные
+  (`tools/assetgen/gen_road.py`, все биомы, tint+акценты), террейны/фасады —
+  `tools/assetgen/gen_sdxl_tex.py` (Z-Image Turbo; стиль идёт в НАЧАЛО промпта —
+  модель обрезает хвост; негативы игнорируются при CFG 1.0). Пропсы-биллборды —
+  `tools/assetgen/gen_props.py` (Qwen-Image, хромакей). Дома building-kit GLB
+  cel-ятся в рантайме (`track_builder._tune_kit_materials` → `ToonMaterial`).
 - Резкость: `project.godot` — MSAA 4x, anisotropic 16, `texture_mipmap_bias=-0.35`.
 - Свет/грейдинг — `main.gd _build_environment()`: солнце 4-сплит PSSM, резкие
   тени; день — LINEAR-тонмаппинг, насыщенность 1.22, лёгкий туман; ночь (если

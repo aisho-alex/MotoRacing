@@ -3,4 +3,4 @@ tool: SwarmUI Qwen-Image chroma-key cutout
 date: 2026-09-24
 rights: own work, CC0 (procedural synthesis, no third-party input)
 prompt: n/a (procedural)
-note: seed: 13828; prompt: single cluster of dark basalt column rocks, volcanic formation, game sprite, complete object, full silhouette visible, natural irregular shape, side elevation, photorealistic botanical reference, sharp detail, centered, isolated on a solid pure magenta chroma-key background, even neutral lighting, no ground, no cast shadow, clean edges
+note: seed: 13828; prompt: single cluster of dark basalt column rocks, volcanic formation, game sprite, complete object, full silhouette visible, side elevation, flat cel-shaded cartoon game asset, hand-painted stylized illustration, bold clean shapes, bright saturated colors, simple readable forms, centered, isolated on a solid pure magenta chroma-key background, even neutral lighting, no ground, no cast shadow, clean edges

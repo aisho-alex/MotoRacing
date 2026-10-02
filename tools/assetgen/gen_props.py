@@ -23,7 +23,7 @@ from PIL import Image, ImageFilter
 
 from pbr_common import asset_path, write_license
 
-HOST = "http://127.0.0.1:7802"
+HOST = os.environ.get("PROPS_HOST", "http://127.0.0.1:7801")
 MODEL = "Qwen2.1/qwen_image_2.1_int8_convrot.safetensors"
 STEPS = 28
 CFG = 2.8
@@ -33,8 +33,9 @@ MAGENTA = np.array([1.0, 0.0, 1.0])
 
 NEG = ("ground, soil, grass, horizon, sky, landscape, shadows cast on "
        "background, drop shadow, multiple objects, multiple trees, people, "
-       "text, watermark, frame, border, cut-off object, blurry, cartoon, "
-       "painting, illustration, low detail, night, blue tint, winter, dead tree")
+       "text, watermark, frame, border, cut-off object, blurry, photorealistic, "
+       "photo, photograph, realistic, low detail, night, blue tint, winter, "
+       "dead tree")
 
 SPECS = {
     "city": [
@@ -282,11 +283,12 @@ def main() -> None:
             if os.path.exists(out):
                 print(f"{biome}/{name}: exists, skip")
                 continue
-            prompt = (f"{extra}, complete object, full silhouette visible, natural "
-                      f"irregular shape, side elevation, photorealistic botanical "
-                      f"reference, sharp detail, centered, isolated on a solid pure "
-                      f"magenta chroma-key background, even neutral lighting, no "
-                      f"ground, no cast shadow, clean edges")
+            prompt = (f"{extra}, complete object, full silhouette visible, side "
+                      f"elevation, flat cel-shaded cartoon game asset, hand-painted "
+                      f"stylized illustration, bold clean shapes, bright saturated "
+                      f"colors, simple readable forms, centered, isolated on a solid "
+                      f"pure magenta chroma-key background, even neutral lighting, "
+                      f"no ground, no cast shadow, clean edges")
             seed = 9100 + zlib.crc32(f"{biome}/{name}".encode()) % 20000
             img = generate(prompt, seed)
             if img is None:

@@ -1,6 +1,6 @@
 asset: asphalt_albedo.webp
-tool: SwarmUI Z-Image Turbo + offset-heal seamless
+tool: procedural synthesis (tools/assetgen/gen_road.py)
 date: 2026-09-24
 rights: own work, CC0 (procedural synthesis, no third-party input)
 prompt: n/a (procedural)
-note: seed: 12781; score: 43.26; prompt: seamless tileable cold mountain asphalt road surface, photorealistic, coarse aggregate stones, fine gravel, dark grey worn tarmac with white salt stains and fine frost cracks, seamless tileable texture, flat even diffuse lighting, top-down orthographic view, pbr albedo map, high detail
+note: flat-cartoon tarmac, tint (0.95, 0.99, 1.08), accent salt

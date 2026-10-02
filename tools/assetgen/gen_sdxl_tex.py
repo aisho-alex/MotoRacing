@@ -35,18 +35,37 @@ CFG = float(os.environ.get("TEX_CFG", "1.0"))
 GEN_SIZE = int(os.environ.get("TEX_GEN", "1536"))
 OUT_SIZE = 1024
 BEST_OF = int(os.environ.get("TEX_BEST", "3"))
+# Cel look: keep relief interaction but flatten the derived normal maps.
+NORMAL_SCALE = float(os.environ.get("TEX_NORMAL_SCALE", "0.5"))
 SEED_BASE = 7711
 
+# Flat cel / hand-painted game-art style (Phase C): the world textures must
+# match the toon-shaded actors, so the style lives in the positive prompt
+# (Z-Image Turbo runs at CFG 1.0 and ignores the negative prompt).
+STYLE = ("flat cel-shaded cartoon game art, hand-painted stylized texture, bold "
+         "clean shapes, bright saturated colors, minimal soft shading, "
+         "no photorealistic detail, ")
 QUALITY = ("seamless tileable texture, flat even diffuse lighting, top-down "
-           "orthographic view, pbr albedo map, high detail")
-QUALITY_FACADE = ("seamless tileable texture, flat orthographic front view, flat "
-                  "even diffuse lighting, no shading gradient, high detail")
-NEG = ("shadows, lighting, light gradient, vignette, border, frame, objects, props, "
-       "text, watermark, lines, blurry, jpeg artifacts, people, cars, cartoon, "
-       "painting, illustration, oversaturated colors")
-ROAD_NEG_EXTRA = (", tiles, tile joints, ceramic, concrete slabs, paving stones, "
-                  "grid lines, snow, ice, water, wood planks, fabric, grass, plants, "
-                  "sand dune, flowers")
+           "orthographic view, " + STYLE + "simple readable material")
+QUALITY_FACADE = ("repeating flat 2D facade texture map, straight front elevation, "
+                  "orthographic, regular rows of simple windows, flat even lighting, "
+                  "no shading gradient, " + STYLE
+                  + "no perspective, no people, no sky, no street, no scene")
+# Z-Image Turbo truncates long prompts, so the style must LEAD the prompt rather
+# than trail it; these prefixes go in front of the per-material spec text.
+STYLE_SURFACE = ("flat cel-shaded cartoon game art, seamless tileable flat 2D "
+                 "material texture, top-down orthographic view, flat even lighting, "
+                 "no perspective, no objects, no scene, ")
+STYLE_FACADE = ("flat cel-shaded cartoon game art, repeating flat 2D facade texture "
+                "map, straight front elevation, orthographic, flat even lighting, "
+                "no perspective, no people, no sky, no street, no scene, ")
+NEG = ("photo, photograph, realistic, grime, heavy noise, high "
+       "detail, shadows, lighting, light gradient, vignette, border, frame, objects, "
+       "props, text, watermark, blurry, jpeg artifacts, people, cars")
+ROAD_NEG_EXTRA = (", tiles, tile joints, pavers, bricks, grid lines, perspective, "
+                  "road markings, lane lines, horizon, sky, objects, scene, ceramic, "
+                  "concrete slabs, paving stones, snow, ice, water, wood planks, "
+                  "fabric, grass, plants, sand dune, flowers")
 FACADE_NEG_EXTRA = (", tiles, ceramic, plain flat blank wall, grid pattern, snow, "
                     "grass, plants, sky, blurry")
 TERRAIN_NEG_EXTRA = (", tiles, ceramic, concrete slabs, paving, grid pattern, wood, "
@@ -60,85 +79,85 @@ KEY_NEG_EXTRA = {
 
 SPECS = {
     "city_road": {
-        "prompt": "seamless tileable dark grey asphalt road surface, photorealistic, "
+        "prompt": "seamless tileable dark grey asphalt road surface, "
                   "coarse aggregate stones, fine gravel, sparse hairline cracks, a few "
                   "dark tar repair patches, subtle tyre polish bands, " + QUALITY,
         "rough": 0.92, "normal_strength": 2.2,
     },
     "city_terrain": {
-        "prompt": "seamless tileable mowed lawn grass texture, photorealistic, natural "
+        "prompt": "seamless tileable mowed lawn grass texture, natural "
                   "medium green turf, mixed grass blades with a few clover leaves and "
                   "subtle dry yellow patches, " + QUALITY,
         "rough": 0.85, "normal_strength": 1.7,
     },
     "desert_road": {
         "prompt": "seamless tileable sun-bleached grey asphalt road surface, "
-                  "photorealistic, coarse aggregate stones, fine gravel, cracked tar "
+                  "coarse aggregate stones, fine gravel, cracked tar "
                   "patches, drifting sand grains, " + QUALITY,
         "rough": 0.9, "normal_strength": 2.2,
     },
     "desert_terrain": {
-        "prompt": "seamless tileable desert sand ground texture, photorealistic, warm "
+        "prompt": "seamless tileable desert sand ground texture, warm "
                   "beige sand with soft wind ripples, scattered pebbles and coarse "
                   "grains, " + QUALITY,
         "rough": 0.8, "normal_strength": 1.6,
     },
     "alpine_road": {
         "prompt": "seamless tileable cold mountain asphalt road surface, "
-                  "photorealistic, coarse aggregate stones, fine gravel, dark grey worn "
+                  "coarse aggregate stones, fine gravel, dark grey worn "
                   "tarmac with white salt stains and fine frost cracks, " + QUALITY,
         "rough": 0.88, "normal_strength": 2.2,
     },
     "alpine_terrain": {
-        "prompt": "seamless tileable clean snow surface texture, photorealistic, "
+        "prompt": "seamless tileable clean snow surface texture, "
                   "subtle wind packed texture and faint sparkle, soft blue tint in "
                   "shallow dips, a few tiny ice crystals, " + QUALITY,
         "rough": 0.6, "normal_strength": 1.5,
     },
     "coast_road": {
         "prompt": "seamless tileable weathered grey asphalt road surface, "
-                  "photorealistic, coarse aggregate stones, fine gravel, sun-faded "
+                  "coarse aggregate stones, fine gravel, sun-faded "
                   "tarmac with sandy dust and fine hairline cracks, " + QUALITY,
         "rough": 0.9, "normal_strength": 2.1,
     },
     "coast_terrain": {
-        "prompt": "seamless tileable coastal sand ground texture, photorealistic, warm "
+        "prompt": "seamless tileable coastal sand ground texture, warm "
                   "pale sand with irregular scattered marram grass tufts and shell "
                   "fragments, " + QUALITY,
         "rough": 0.82, "normal_strength": 1.7,
     },
     "canyon_road": {
         "prompt": "seamless tileable dusty grey-brown asphalt road surface, "
-                  "photorealistic, coarse aggregate stones, fine gravel, cracked tar "
+                  "coarse aggregate stones, fine gravel, cracked tar "
                   "patches with desert dust drift, " + QUALITY,
         "rough": 0.93, "normal_strength": 2.2,
     },
     "canyon_terrain": {
-        "prompt": "seamless tileable red rock canyon ground texture, photorealistic, "
+        "prompt": "seamless tileable red rock canyon ground texture, "
                   "orange sandstone gravel, cracked dry earth, scattered pebbles and "
                   "rocks, " + QUALITY,
         "rough": 0.9, "normal_strength": 1.9,
     },
     "sakura_road": {
-        "prompt": "seamless tileable smooth grey asphalt road surface, photorealistic, "
+        "prompt": "seamless tileable smooth grey asphalt road surface, "
                   "fine aggregate stones, sparse hairline cracks, a few fallen pink "
                   "cherry blossom petals, " + QUALITY,
         "rough": 0.9, "normal_strength": 2.0,
     },
     "sakura_terrain": {
         "prompt": "seamless tileable short bright green spring lawn texture, "
-                  "photorealistic, fresh natural turf with fallen pink cherry blossom "
+                  "fresh natural turf with fallen pink cherry blossom "
                   "petals and subtle dirt patches, " + QUALITY,
         "rough": 0.85, "normal_strength": 1.6,
     },
     "volcano_road": {
         "prompt": "seamless tileable dark charcoal volcanic basalt asphalt road "
-                  "surface, photorealistic, coarse black aggregate stones, fine gravel, "
+                  "surface, coarse black aggregate stones, fine gravel, "
                   "worn tarmac dusted with grey ash and fine cracks, " + QUALITY,
         "rough": 0.88, "normal_strength": 2.2,
     },
     "volcano_terrain": {
-        "prompt": "seamless tileable black volcanic ground texture, photorealistic, "
+        "prompt": "seamless tileable black volcanic ground texture, "
                   "rough porous lava rock, grey ash, scoria pebbles and cooling cracks, "
                   + QUALITY,
         "rough": 0.92, "normal_strength": 2.0,
@@ -150,81 +169,81 @@ FACADES = {
     "city": [
         ("a", "seamless tileable modern office building facade, dark low-iron glass "
               "curtain wall with pale stone mullions and subtle floor variation, "
-              "photorealistic, " + QUALITY_FACADE, 0.45),
+              "" + QUALITY_FACADE, 0.45),
         ("b", "seamless tileable weathered red-brown brick apartment facade in a "
               "realistic mortar bond, recessed windows with grey stone lintels and "
-              "subtle urban grime, photorealistic, " + QUALITY_FACADE, 0.82),
+              "subtle urban grime, " + QUALITY_FACADE, 0.82),
         ("c", "seamless tileable contemporary concrete and glass tower facade, warm "
               "grey panels, narrow recessed windows and visible joints, "
-              "photorealistic, " + QUALITY_FACADE, 0.62),
+              "" + QUALITY_FACADE, 0.62),
         ("d", "seamless tileable downtown mixed-use facade with beige limestone base "
-              "rows and dark aluminum window frames, photorealistic, " + QUALITY_FACADE, 0.72),
+              "rows and dark aluminum window frames, " + QUALITY_FACADE, 0.72),
     ],
     "desert": [
         ("a", "seamless tileable sandstone building facade with small deep-set windows, "
-              "warm sand-colored stone, photorealistic, " + QUALITY_FACADE, 0.85),
+              "warm sand-colored stone, " + QUALITY_FACADE, 0.85),
         ("b", "seamless tileable adobe desert hotel facade, smooth earth-toned plaster "
-              "with wooden shutters, photorealistic, " + QUALITY_FACADE, 0.85),
+              "with wooden shutters, " + QUALITY_FACADE, 0.85),
         ("c", "seamless tileable whitewashed desert stucco facade with narrow arched "
-              "windows and blue painted trim, photorealistic, " + QUALITY_FACADE, 0.83),
+              "windows and blue painted trim, " + QUALITY_FACADE, 0.83),
         ("d", "seamless tileable modern red sandstone office facade with horizontal "
-              "window bands, photorealistic, " + QUALITY_FACADE, 0.7),
+              "window bands, " + QUALITY_FACADE, 0.7),
     ],
     "alpine": [
         ("a", "seamless tileable grey stone mountain hotel facade with warm lit "
-              "windows and dark timber frames, photorealistic, " + QUALITY_FACADE, 0.75),
+              "windows and dark timber frames, " + QUALITY_FACADE, 0.75),
         ("b", "seamless tileable concrete alpine building facade, minimalist grey "
-              "panels with narrow windows, photorealistic, " + QUALITY_FACADE, 0.7),
+              "panels with narrow windows, " + QUALITY_FACADE, 0.7),
         ("c", "seamless tileable alpine chalet timber facade, honey wooden planks "
-              "with small windows and carved balcony rail, photorealistic, "
+              "with small windows and carved balcony rail, "
               + QUALITY_FACADE, 0.8),
         ("d", "seamless tileable modern glass and dark stone alpine hotel facade, "
-              "photorealistic, " + QUALITY_FACADE, 0.55),
+              "" + QUALITY_FACADE, 0.55),
     ],
     "coast": [
         ("a", "seamless tileable white stucco seaside hotel facade with blue shutters "
-              "and small balconies, photorealistic, " + QUALITY_FACADE, 0.75),
+              "and small balconies, " + QUALITY_FACADE, 0.75),
         ("b", "seamless tileable pastel mediterranean apartment facade, cream and "
-              "terracotta stripes with arched windows, photorealistic, " + QUALITY_FACADE, 0.75),
+              "terracotta stripes with arched windows, " + QUALITY_FACADE, 0.75),
         ("c", "seamless tileable weathered pastel pink villa facade with white "
-              "shutters and wrought iron balconies, photorealistic, " + QUALITY_FACADE, 0.78),
+              "shutters and wrought iron balconies, " + QUALITY_FACADE, 0.78),
         ("d", "seamless tileable modern seaside white concrete facade with large glass "
-              "windows and vertical wooden slats, photorealistic, " + QUALITY_FACADE, 0.6),
+              "windows and vertical wooden slats, " + QUALITY_FACADE, 0.6),
     ],
     "canyon": [
         ("a", "seamless tileable carved sandstone cliff-dwelling facade, warm red rock "
-              "with small square windows and timber lintels, photorealistic, "
+              "with small square windows and timber lintels, "
               + QUALITY_FACADE, 0.88),
         ("b", "seamless tileable weathered desert adobe facade, sun-bleached earth "
-              "plaster with wooden shutters and cracked stucco, photorealistic, "
+              "plaster with wooden shutters and cracked stucco, "
               + QUALITY_FACADE, 0.86),
         ("c", "seamless tileable rustic desert lodge facade, stacked stone and "
-              "weathered timber with small deep windows, photorealistic, "
+              "weathered timber with small deep windows, "
               + QUALITY_FACADE, 0.84),
         ("d", "seamless tileable sun-bleached stacked sandstone block facade with "
-              "narrow windows, photorealistic, " + QUALITY_FACADE, 0.87),
+              "narrow windows, " + QUALITY_FACADE, 0.87),
     ],
     "sakura": [
         ("a", "seamless tileable traditional japanese machiya wooden facade, dark "
               "timber lattice and white plaster with grey tiled roof trim, "
-              "photorealistic, " + QUALITY_FACADE, 0.78),
+              "" + QUALITY_FACADE, 0.78),
         ("b", "seamless tileable modern light stucco apartment facade with dark timber "
-              "accents and narrow windows, photorealistic, " + QUALITY_FACADE, 0.74),
+              "accents and narrow windows, " + QUALITY_FACADE, 0.74),
         ("c", "seamless tileable japanese modern shoji style facade, white plaster and "
-              "dark timber grid with paper panels, photorealistic, " + QUALITY_FACADE, 0.72),
+              "dark timber grid with paper panels, " + QUALITY_FACADE, 0.72),
         ("d", "seamless tileable pastel japanese apartment facade with tiled windows "
-              "and slim balcony rails, photorealistic, " + QUALITY_FACADE, 0.73),
+              "and slim balcony rails, " + QUALITY_FACADE, 0.73),
     ],
     "volcano": [
         ("a", "seamless tileable dark volcanic stone fortress facade, black basalt "
-              "blocks with narrow slit windows, photorealistic, " + QUALITY_FACADE, 0.82),
+              "blocks with narrow slit windows, " + QUALITY_FACADE, 0.82),
         ("b", "seamless tileable blackened concrete and obsidian panel facade, dark "
-              "grey with faint ember cracks around windows, photorealistic, "
+              "grey with faint ember cracks around windows, "
               + QUALITY_FACADE, 0.72),
         ("c", "seamless tileable dark obsidian and basalt building facade with glowing "
-              "ember cracks, photorealistic, " + QUALITY_FACADE, 0.78),
+              "ember cracks, " + QUALITY_FACADE, 0.78),
         ("d", "seamless tileable charred timber and black stone facade with narrow "
-              "windows, photorealistic, " + QUALITY_FACADE, 0.8),
+              "windows, " + QUALITY_FACADE, 0.8),
     ],
 }
 
@@ -391,7 +410,7 @@ def best_of(prompt: str, seed0: int, feather: float, detrend_frac: float,
 def derivatives(spec: dict, hi_albedo: Image.Image, albedo: Image.Image,
                 out: str, name: str) -> None:
     lum = np.asarray(hi_albedo.convert("L")).astype(np.float64) / 255.0
-    nm = normal_map(lum, strength=spec["normal_strength"])
+    nm = normal_map(lum, strength=spec["normal_strength"] * NORMAL_SCALE)
     save_png(f"{out}/{name}_normal.png", _resize_normal(nm, OUT_SIZE))
     lum2 = np.asarray(albedo.convert("L")).astype(np.float64) / 255.0
     base_r = spec["rough"]
@@ -414,7 +433,7 @@ def gen_facade(biome: str, suffix: str, prompt: str, rough: float, force: bool) 
         print(f"facade {biome}/{suffix}: exists, skip")
         return
     seed0 = SEED_BASE + zlib.crc32(f"facade/{biome}/{suffix}".encode()) % 10000
-    best = best_of(prompt, seed0, feather=0.06, detrend_frac=0.15,
+    best = best_of(STYLE_FACADE + prompt, seed0, feather=0.06, detrend_frac=0.15,
                    negative=NEG + FACADE_NEG_EXTRA, size=GEN_SIZE)
     if best is None:
         print(f"facade {biome}/{suffix}: FAILED")
@@ -515,7 +534,7 @@ def main() -> None:
         detrend_frac = 0.18 if key.endswith("_road") else 0.22
         neg_extra = (ROAD_NEG_EXTRA if key.endswith("_road") else TERRAIN_NEG_EXTRA)
         neg_extra += KEY_NEG_EXTRA.get(key, "")
-        best = best_of(spec["prompt"], seed0, feather, detrend_frac,
+        best = best_of(STYLE_SURFACE + spec["prompt"], seed0, feather, detrend_frac,
                        negative=NEG + neg_extra)
         if best is None:
             print(f"{key}: FAILED")

@@ -98,6 +98,7 @@ var _contact_shadow_material: StandardMaterial3D
 var _kit_aabb_cache: Dictionary = {}
 ## Kit materials whose emission was already tuned for the current race mode.
 var _kit_tuned_materials: Dictionary = {}
+var _kit_toon_materials: Dictionary = {}  # source material -> shared toon material
 var _light_pool_mesh: QuadMesh
 var _light_pool_material: StandardMaterial3D
 var _puddle_mesh: QuadMesh
@@ -1625,6 +1626,9 @@ static func _footprint_corners(aabb: AABB) -> Array:
 
 ## Kit GLBs ship with emissive "lights on" windows and neon signs. In daylight
 ## that reads as glow-through — zero it; at night give it a bit of extra pop.
+## Kit buildings ship with baked photo materials; swap the non-emissive ones
+## for the shared toon material so the skyline matches the cel-shaded actors.
+## Emissive (night window) materials stay standard so they can still glow.
 func _tune_kit_materials(instance: Node3D, night: bool) -> void:
 	for mi in instance.find_children("*", "MeshInstance3D", true, false):
 		var mesh := (mi as MeshInstance3D).mesh
@@ -1632,12 +1636,18 @@ func _tune_kit_materials(instance: Node3D, night: bool) -> void:
 			continue
 		for s in mesh.get_surface_count():
 			var m := mesh.surface_get_material(s) as StandardMaterial3D
-			if m == null or _kit_tuned_materials.has(m):
+			if m == null:
 				continue
-			_kit_tuned_materials[m] = true
-			if not m.emission_enabled:
+			if m.emission_enabled:
+				if not _kit_tuned_materials.has(m):
+					_kit_tuned_materials[m] = true
+					m.emission_energy_multiplier = 1.5 if night else 0.0
 				continue
-			m.emission_energy_multiplier = 1.5 if night else 0.0
+			var toon: ShaderMaterial = _kit_toon_materials.get(m)
+			if toon == null:
+				toon = ToonMaterial.from_base(m, -1.0)
+				_kit_toon_materials[m] = toon
+			(mi as MeshInstance3D).set_surface_override_material(s, toon)
 
 
 func _make_building(rng: RandomNumberGenerator, spot: Dictionary,

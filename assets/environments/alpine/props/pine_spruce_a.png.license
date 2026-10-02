@@ -1,6 +1,6 @@
 asset: pine_spruce_a.png
-tool: SwarmUI Qwen-Image chroma-key sprite
+tool: SwarmUI Qwen-Image chroma-key cutout
 date: 2026-09-24
 rights: own work, CC0 (procedural synthesis, no third-party input)
 prompt: n/a (procedural)
-note: prompt: single tall narrow spruce conifer tree, dark green, game sprite, side view, orthographic, centered, isolated on a solid magenta background, even flat lighting, no cast shadow, clean edges
+note: seed: 12222; prompt: single tall narrow spruce conifer tree, dark green, game sprite, complete object, full silhouette visible, side elevation, flat cel-shaded cartoon game asset, hand-painted stylized illustration, bold clean shapes, bright saturated colors, simple readable forms, centered, isolated on a solid pure magenta chroma-key background, even neutral lighting, no ground, no cast shadow, clean edges
