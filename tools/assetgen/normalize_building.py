@@ -44,6 +44,9 @@ def main():
     mn, mx = bounds(g, world)
     print(f"raw bounds min={mn.round(2)} max={mx.round(2)}")
 
+    # Optional 4th arg "flat"/"nogrow" suppresses the diorama up-scale used for
+    # tiny models: flat props (skate ramps, courts) must keep their real height.
+    nogrow = len(sys.argv) > 4 and sys.argv[4] in ("flat", "nogrow", "no-grow")
     scale = 1.0
     if len(sys.argv) > 3:
         target = float(sys.argv[3])
@@ -54,7 +57,7 @@ def main():
         if horiz > target:
             scale = target / horiz
             print(f"rescale x{scale:.3f} (footprint {horiz:.1f}m -> {target:.1f}m)")
-        elif height < 10.0:
+        elif height < 10.0 and not nogrow:
             scale = 14.0 / height
             print(f"grow x{scale:.3f} (height {height:.1f}m -> ~14m)")
     shift = [-scale * (mn[0] + mx[0]) / 2.0, -scale * mn[1],

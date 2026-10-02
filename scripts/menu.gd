@@ -40,6 +40,12 @@ Game Ready City Buildings — mireubay1 · CC-BY · Sketchfab
 Low Poly Building — roh3d · CC-BY · Sketchfab
 Lowpoly Urban House — AspectStudio · CC-BY · Sketchfab
 
+[b]CITY LOTS (mall · skatepark · fountain)[/b]
+Low rise department store — aitortilla01 · CC-BY · Sketchfab
+Skatepark Rails & Ramps — maxkeeley · CC-BY · Sketchfab
+Fountain — local.yany · CC-BY · Sketchfab
+Cel textures — generated (SwarmUI Z-Image Turbo)
+
 Full license texts: assets/*/*/*.license"""
 
 

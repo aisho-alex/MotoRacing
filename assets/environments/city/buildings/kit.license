@@ -22,6 +22,18 @@ urbanhouse  — "Lowpoly Urban House" by AspectStudio (CC-BY 4.0)
 largebld    — "Large Low Poly Building" by jimbogies (CC-BY 4.0)
             https://sketchfab.com/3d-models/67b32912ff9d45c2a6ce5d32c72f69df
 
+City lot props (empty-lot infill, see docs/assets.md §8):
+mall        — "Low rise department store building" by aitortilla01 (CC-BY 4.0)
+            https://sketchfab.com/3d-models/fbf28e40ff7b409191b2082497f29aeb
+skatepark   — "Skatepark Rails & Ramps Resource Kit" by maxkeeley (CC-BY 4.0)
+            https://sketchfab.com/3d-models/f701330fdc4f46cbbf0cf92bd5194201
+fountain    — "Fountain" by local.yany (CC-BY 4.0)
+            https://sketchfab.com/3d-models/68ac582645064edcb31965d49055266c
+
+changes (lots): normalize_building.py (mall footprint <=26 m, skatepark kept flat),
+externalize_textures.py, then retextured with generated cel textures
+(retexture_model.py + gen_model_tex.py, SwarmUI Z-Image Turbo; tex/*.license).
+
 changes (Sketchfab set): texture resize <=1024 (512 for props), grounded + footprint pivot,
 optional footprint clamp to 26 m (tools/assetgen/normalize_building.py)
 date: 2026-09-28

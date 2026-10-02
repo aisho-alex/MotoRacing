@@ -1,0 +1,6 @@
+asset: skate_concrete_normal.png
+tool: procedural (tools/assetgen/gen_sdxl_tex.py)
+date: 2026-09-24
+rights: own work, CC0 (procedural synthesis, no third-party input)
+prompt: n/a (procedural)
+note: normal derived from high-res Z-Image albedo luminance (wrap gradient)

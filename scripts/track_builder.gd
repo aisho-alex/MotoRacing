@@ -84,6 +84,31 @@ const FRONT_ROW_KIT: Array[String] = [
 ## Taller silhouettes mixed into the front row for variation.
 const FRONT_ROW_TOWERS: Array[String] = ["citybld", "largebld"]
 
+## --- City lot infill (fills the empty band behind the street wall and the
+## recessed plazas visible through wide alleys). Real GLBs (mall/skatepark/
+## fountain) retextured with SwarmUI cel textures; ground pads use the same
+## generated pavement/court/concrete sets. ---------------------------------
+const LOT_KIT_DIR := "res://assets/environments/city/buildings"
+const LOT_TEX_DIR := "res://assets/environments/city/buildings/tex"
+const LOT_MALL_MODEL := "mall"
+const LOT_SKATE_MODEL := "skatepark"
+const LOT_FOUNTAIN_MODEL := "fountain"
+## World-space triplanar scale (1 / texture period, m) for the mall facade: its
+## own UV atlas does not match the tiled generated texture.
+const LOT_MALL_TRI_SCALE := 0.07
+## Lots placed per track (split across both sides); lateral band sits between the
+## front-row street wall and the 48 m city-building belt.
+const LOT_COUNT := 11
+const LOT_LATERAL_MIN := 32.0
+const LOT_LATERAL_MAX := 46.0
+const LOT_FOOTPRINT_RADIUS := 19.0
+const LOT_MIN_GAP := 16.0
+## Wide alleys in the street wall: with this chance an alley is widened and a
+## recessed mini-plaza (fountain + trees) is tucked inside it.
+const WIDE_ALLEY_CHANCE := 0.55
+const WIDE_ALLEY_MIN := 13.0
+const WIDE_ALLEY_MAX := 20.0
+
 var def: TrackDef
 
 var centerline := PackedVector3Array()
@@ -1263,8 +1288,25 @@ func _make_buildings(rng: RandomNumberGenerator, occupied: Array[Vector3]) -> No
 	var root := Node3D.new()
 	root.name = "Buildings"
 	var use_kit := def.urban_canyon and _kit_available()
+	var alley_slots: Array[Dictionary] = []
 	if use_kit:
-		root.add_child(_make_street_front(rng, occupied))
+		root.add_child(_make_street_front(rng, occupied, alley_slots))
+		# Lots fill the empty band behind the street wall; their own RNG keeps
+		# the existing building layout unchanged. Lots are spaced only against
+		# each other (they sit behind the shallow front row), then folded into
+		# `occupied` so the 48 m belt keeps clear of them.
+		var lot_rng := RandomNumberGenerator.new()
+		lot_rng.seed = def.decor_seed ^ 0x1071
+		var lot_occupied: Array[Vector3] = []
+		var lot_i := 0
+		for spot in _place_city_lots(lot_rng, LOT_COUNT, lot_occupied):
+			var lot := _make_lot(lot_rng, spot, lot_i == 0)
+			if lot != null:
+				lot.name = "Lot_%d_%s" % [lot_i, lot.name]
+				lot_i += 1
+				root.add_child(lot)
+		_make_alley_plazas(lot_rng, alley_slots, root)
+		occupied.append_array(lot_occupied)
 	var spots: Array[Dictionary] = []
 	if def.urban_canyon:
 		spots = _place_city_buildings(rng, def.building_count, occupied)
@@ -1292,6 +1334,413 @@ func _make_buildings(rng: RandomNumberGenerator, occupied: Array[Vector3]) -> No
 		if def.skyline_count > 0:
 			root.add_child(_make_skyline(rng, mats, occupied))
 	return root
+
+
+## --- City lot infill -------------------------------------------------------
+
+
+## Evenly distributed lot candidates in the band behind the street wall.
+func _place_city_lots(rng: RandomNumberGenerator, count: int,
+		occupied: Array[Vector3]) -> Array[Dictionary]:
+	var spots: Array[Dictionary] = []
+	var n := sample_count()
+	var per_side := int(ceil(float(count) * 0.5))
+	var first := 24
+	var last := n - 24
+	for side_value in [-1.0, 1.0]:
+		var side: float = side_value
+		for j in per_side:
+			if spots.size() >= count:
+				break
+			var t := float(j) / maxf(float(per_side - 1), 1.0)
+			for _attempt in 6:
+				var jitter := rng.randf_range(-1.0, 1.0) / maxf(float(per_side), 1.0)
+				var idx := clampi(first + int(float(last - first) * (t + jitter)), first, last)
+				var lateral := rng.randf_range(LOT_LATERAL_MIN, LOT_LATERAL_MAX)
+				var p := centerline[idx] + side_vector(idx) * side * lateral
+				p.y = 0.0
+				if min_distance_to_track(p) < def.road_half_width + ROAD_DECOR_MARGIN + LOT_FOOTPRINT_RADIUS:
+					continue
+				var clear := true
+				for q in occupied:
+					if p.distance_squared_to(q) < LOT_MIN_GAP * LOT_MIN_GAP:
+						clear = false
+						break
+				if not clear:
+					continue
+				occupied.append(p)
+				spots.append({"pos": p, "idx": idx, "lateral": lateral, "side": side})
+				break
+	return spots
+
+
+## Picks one lot kind and builds it. Everything lives in world space under an
+## identity root so the footprint matches what the placement measured. The first
+## lot on every track is forced to a mall so the shopping centre always shows up.
+func _make_lot(rng: RandomNumberGenerator, spot: Dictionary,
+		force_mall := false) -> Node3D:
+	var roll := 0.0 if force_mall else rng.randf()
+	var root: Node3D
+	var kind_name := ""
+	if roll < 0.16:
+		kind_name = "LotMall"
+		root = _make_lot_mall(rng, spot)
+	elif roll < 0.40:
+		kind_name = "LotSkate"
+		root = _make_lot_skate(rng, spot)
+	elif roll < 0.64:
+		kind_name = "LotPlaza"
+		root = _make_lot_plaza(rng, spot)
+	elif roll < 0.80:
+		kind_name = "LotCourt"
+		root = _make_lot_court(rng, spot)
+	else:
+		kind_name = "LotParking"
+		root = _make_lot_parking(rng, spot)
+	if root != null:
+		root.name = kind_name
+	return root
+
+
+## Ground material for a lot pad, driven by a generated SwarmUI cel texture.
+func _lot_ground_material(set_name: String, rough: float,
+		period := 6.0) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	var tex := _load_tex("%s/%s.png" % [LOT_TEX_DIR, set_name])
+	if tex != null:
+		m.albedo_texture = tex
+	m.albedo_color = Color(1.06, 1.06, 1.1)
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE / period
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	m.roughness = rough
+	m.metallic = 0.0
+	var nrm := _load_tex("%s/%s_normal.png" % [LOT_TEX_DIR, set_name])
+	if nrm != null:
+		m.normal_enabled = true
+		m.normal_texture = nrm
+		m.normal_scale = 0.6
+	var orm := _load_tex("%s/%s_orm.png" % [LOT_TEX_DIR, set_name])
+	if orm != null:
+		m.roughness_texture = orm
+		m.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+		m.ao_enabled = true
+		m.ao_texture = orm
+		m.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+	return m
+
+
+## Thin slab centred on `center`; local Z runs along the track, X across it.
+func _add_lot_pad(parent: Node3D, idx: int, center: Vector3, size_a: float,
+		size_l: float, material: StandardMaterial3D, y := 0.03,
+		height := 0.12) -> MeshInstance3D:
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(size_l, height, size_a)
+	mesh.material = material
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = center + Vector3.UP * y
+	mi.rotation.y = tangent_yaw(idx)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(mi)
+	return mi
+
+
+## Instantiates a lot GLB (mall/skatepark/fountain) with cel materials, chunky
+## camera blocker and the measured footprint.
+func _spawn_lot_kit(rng: RandomNumberGenerator, id: String, pos: Vector3,
+		yaw: float, scale_v: float, triplanar: bool) -> Node3D:
+	var path := "%s/%s.glb" % [LOT_KIT_DIR, id]
+	if not ResourceLoader.exists(path):
+		return null
+	var packed: PackedScene = load(path)
+	if packed == null:
+		return null
+	var instance := packed.instantiate() as Node3D
+	if instance == null:
+		return null
+	_tune_lot_materials(instance, def.night_racing, triplanar)
+	var aabb := _kit_local_aabb(path, instance)
+	var root := Node3D.new()
+	root.position = pos
+	root.rotation.y = yaw
+	root.scale = Vector3.ONE * scale_v
+	var w := maxf(aabb.size.x, 1.0)
+	var d := maxf(aabb.size.z, 1.0)
+	var h := maxf(aabb.size.y, 1.0)
+	var center := aabb.get_center()
+	var holder := Node3D.new()
+	holder.position = Vector3(center.x, 0.0, center.z)
+	holder.add_child(instance)
+	root.add_child(holder)
+	_add_camera_blocker(root, w, h, d)
+	root.set_meta("kit_footprint", Vector3(w, h, d) * scale_v)
+	return root
+
+
+## Toon conversion for lots. Transparent materials (water/glass) are kept as
+## authored; emission materials keep their StandardMaterial and are dimmed by day.
+func _tune_lot_materials(instance: Node3D, night: bool, triplanar: bool) -> void:
+	for mi in instance.find_children("*", "MeshInstance3D", true, false):
+		var mesh := (mi as MeshInstance3D).mesh
+		if mesh == null:
+			continue
+		for s in mesh.get_surface_count():
+			var m := mesh.surface_get_material(s) as StandardMaterial3D
+			if m == null:
+				continue
+			if m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+				continue
+			if m.emission_enabled:
+				if not _kit_tuned_materials.has(m):
+					_kit_tuned_materials[m] = true
+					m.emission_energy_multiplier = 1.5 if night else 0.0
+				continue
+			var toon := ToonMaterial.from_base(m, -1.0, triplanar, LOT_MALL_TRI_SCALE)
+			(mi as MeshInstance3D).set_surface_override_material(s, toon)
+
+
+func _make_lot_mall(rng: RandomNumberGenerator, spot: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	var idx := int(spot["idx"])
+	var base: Vector3 = spot["pos"]
+	var pad := _lot_ground_material("plaza_pavement", 0.9, 5.0)
+	_add_lot_pad(root, idx, base, 28.0, 13.0, pad, 0.02)
+	var yaw := tangent_yaw(idx) + PI * 0.5 + rng.randf_range(-0.05, 0.05)
+	var b := _spawn_lot_kit(rng, LOT_MALL_MODEL, base + Vector3.UP * 0.05, yaw,
+			rng.randf_range(0.95, 1.1), true)
+	if b == null or not _building_clear(b):
+		if b != null:
+			b.free()
+		return null
+	root.add_child(b)
+	_bind_visibility_range(b)
+	return root
+
+
+func _make_lot_skate(rng: RandomNumberGenerator, spot: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	var idx := int(spot["idx"])
+	var base: Vector3 = spot["pos"]
+	var pad := _lot_ground_material("skate_concrete", 0.85, 4.0)
+	_add_lot_pad(root, idx, base, 21.0, 13.0, pad, 0.02)
+	var yaw := tangent_yaw(idx) + rng.randf_range(-0.15, 0.15)
+	var b := _spawn_lot_kit(rng, LOT_SKATE_MODEL, base + Vector3.UP * 0.05, yaw,
+			rng.randf_range(1.1, 1.35), false)
+	if b == null or not _building_clear(b):
+		if b != null:
+			b.free()
+		return null
+	root.add_child(b)
+	_bind_visibility_range(b)
+	return root
+
+
+func _make_lot_plaza(rng: RandomNumberGenerator, spot: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	var idx := int(spot["idx"])
+	var base: Vector3 = spot["pos"]
+	var pad := _lot_ground_material("plaza_pavement", 0.9, 5.0)
+	_add_lot_pad(root, idx, base, rng.randf_range(14.0, 17.0),
+			rng.randf_range(13.0, 15.0), pad, 0.02)
+	var f := _spawn_lot_kit(rng, LOT_FOUNTAIN_MODEL, base + Vector3.UP * 0.05,
+			rng.randf(), rng.randf_range(2.2, 3.2), false)
+	if f != null and _building_clear(f):
+		root.add_child(f)
+		_bind_visibility_range(f)
+	elif f != null:
+		f.free()
+	_add_lot_trees(rng, root, idx, base, 4)
+	return root
+
+
+func _make_lot_court(rng: RandomNumberGenerator, spot: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	var idx := int(spot["idx"])
+	var base: Vector3 = spot["pos"]
+	var pad := _lot_ground_material("court_paint", 0.82, 8.0)
+	_add_lot_pad(root, idx, base, 24.0, 14.0, pad, 0.02)
+	var t := tangents[idx].normalized()
+	var sv := side_vector(idx)
+	var frame := tangent_yaw(idx)
+	# painted markings: boundary, halfway line and centre circle
+	var line := StandardMaterial3D.new()
+	line.albedo_color = Color(0.95, 0.95, 0.93)
+	line.roughness = 0.6
+	_add_lot_pad(root, idx, base + sv * 7.2, 21.0, 0.16, line, 0.10, 0.05)
+	_add_lot_pad(root, idx, base - sv * 7.2, 21.0, 0.16, line, 0.10, 0.05)
+	_add_lot_pad(root, idx, base + t * 10.5, 0.16, 14.4, line, 0.10, 0.05)
+	_add_lot_pad(root, idx, base - t * 10.5, 0.16, 14.4, line, 0.10, 0.05)
+	var circle := TorusMesh.new()
+	circle.inner_radius = 2.6
+	circle.outer_radius = 2.72
+	var circle_mat := line
+	var circle_mi := MeshInstance3D.new()
+	circle_mi.mesh = circle
+	circle_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	circle_mi.position = base + Vector3.UP * 0.05
+	circle_mi.mesh.surface_set_material(0, circle_mat)
+	root.add_child(circle_mi)
+	var dark := _make_concrete_material()
+	for end_v in [-1.0, 1.0]:
+		var end := float(end_v)
+		var hp: Vector3 = base + t * end * 11.0 + sv * (-float(spot["side"])) * 3.5
+		hp.y = 0.0
+		var pole := CylinderMesh.new()
+		pole.top_radius = 0.09
+		pole.bottom_radius = 0.11
+		pole.height = 3.4
+		var pole_mi := MeshInstance3D.new()
+		pole_mi.mesh = pole
+		pole_mi.position = hp + Vector3.UP * 1.7
+		root.add_child(pole_mi)
+		var board := _add_box(root, Vector3(1.8, 1.05, 0.08), dark, hp + Vector3.UP * 3.5)
+		board.rotation.y = frame
+		var ring := TorusMesh.new()
+		ring.inner_radius = 0.2
+		ring.outer_radius = 0.24
+		var ring_mi := MeshInstance3D.new()
+		ring_mi.mesh = ring
+		ring_mi.position = hp + Vector3.UP * 3.0 + sv * (-float(spot["side"])) * 0.35
+		root.add_child(ring_mi)
+	return root
+
+
+func _make_lot_parking(rng: RandomNumberGenerator, spot: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	var idx := int(spot["idx"])
+	var base: Vector3 = spot["pos"]
+	var asphalt := _load_tex("res://assets/environments/city/road/asphalt_albedo.webp")
+	var pad := StandardMaterial3D.new()
+	if asphalt != null:
+		pad.albedo_texture = asphalt
+	pad.albedo_color = Color(1.0, 1.0, 1.0)
+	pad.uv1_triplanar = true
+	pad.uv1_world_triplanar = true
+	pad.uv1_scale = Vector3.ONE / 7.0
+	pad.roughness = 0.92
+	var size_a := 22.0
+	var size_l := 14.0
+	_add_lot_pad(root, idx, base, size_a, size_l, pad, 0.02)
+	# painted bays across the pad
+	var paint := StandardMaterial3D.new()
+	paint.albedo_color = Color(0.92, 0.92, 0.9)
+	paint.roughness = 0.7
+	var t := tangents[idx].normalized()
+	var sv := side_vector(idx)
+	for k in range(-3, 4):
+		var sp := base + t * float(k) * 3.0
+		sp.y = 0.0
+		_add_lot_pad(root, idx, sp, 0.14, size_l * 0.62, paint, 0.10, 0.05)
+	# a few parked cars on the outer half
+	var car_defs := _traffic_def_paths()
+	var n_cars := mini(3, car_defs.size())
+	for c in n_cars:
+		var cp := base - sv * float(spot["side"]) * rng.randf_range(3.5, 5.5) \
+				+ t * rng.randf_range(-8.0, 8.0)
+		cp.y = 0.1
+		var car := _spawn_static_car(car_defs[c], cp, tangent_yaw(idx) + PI * 0.5)
+		if car != null:
+			root.add_child(car)
+	return root
+
+
+func _traffic_def_paths() -> Array[String]:
+	var out: Array[String] = []
+	var da := DirAccess.open("res://assets/data/traffic")
+	if da == null:
+		return out
+	for f in da.get_files():
+		if f.get_extension() == "tres" and not f.contains("moto"):
+			out.append("res://assets/data/traffic/" + f)
+	out.sort()
+	return out
+
+
+func _spawn_static_car(def_path: String, pos: Vector3, yaw: float) -> Node3D:
+	var td := load(def_path)
+	if td == null:
+		return null
+	var model_path: String = td.model_path
+	if not ResourceLoader.exists(model_path):
+		return null
+	var packed: PackedScene = load(model_path)
+	if packed == null:
+		return null
+	var inst := packed.instantiate() as Node3D
+	if inst == null:
+		return null
+	_tune_lot_materials(inst, def.night_racing, false)
+	var root := Node3D.new()
+	root.position = pos
+	root.rotation.y = yaw + td.model_yaw
+	root.add_child(inst)
+	var cs: Vector3 = td.collision_size
+	_add_camera_blocker(root, cs.x, cs.y, cs.z)
+	return root
+
+
+## Billboard trees (city props) scattered on a lot pad away from the road.
+func _add_lot_trees(rng: RandomNumberGenerator, root: Node3D, idx: int,
+		base: Vector3, count: int) -> void:
+	var prop_dir := def.env_dir() + "/props"
+	var trees: Array[Texture2D] = []
+	var da := DirAccess.open(prop_dir)
+	if da != null:
+		for f in da.get_files():
+			if f.get_extension() == "png" and f.begins_with("tree"):
+				var tx := load(prop_dir + "/" + f) as Texture2D
+				if tx != null:
+					trees.append(tx)
+	if trees.is_empty():
+		return
+	var t := tangents[idx].normalized()
+	var sv := side_vector(idx)
+	# ring the trees around the pad so the centrepiece stays readable
+	var phase := rng.randf() * TAU
+	for k in count:
+		var ang := phase + TAU * float(k) / float(maxi(count, 1))
+		var rad := rng.randf_range(7.0, 9.5)
+		var p := base + t * sin(ang) * rad + sv * cos(ang) * rad
+		p.y = 0.0
+		var tex: Texture2D = trees[rng.randi() % trees.size()]
+		var h_m := rng.randf_range(5.5, 8.0)
+		var spr := Sprite3D.new()
+		spr.texture = tex
+		spr.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		spr.shaded = true
+		spr.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		spr.alpha_scissor_threshold = 0.18
+		spr.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		spr.flip_h = rng.randf() < 0.5
+		spr.pixel_size = h_m / float(tex.get_height())
+		spr.position = Vector3(p.x, h_m * 0.5 - 0.03, p.z)
+		spr.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(spr)
+
+
+## Recessed mini-plazas tucked into wide alleys of the street wall.
+func _make_alley_plazas(rng: RandomNumberGenerator, slots: Array[Dictionary],
+		root: Node3D) -> void:
+	for slot in slots:
+		var idx := int(slot["idx"])
+		var side := float(slot["side"])
+		var t := tangents[idx].normalized()
+		var sv := side_vector(idx)
+		var base := centerline[idx] + t * float(slot["along_shift"]) \
+				+ sv * side * (def.road_half_width + 7.0 + rng.randf_range(4.0, 7.0))
+		base.y = 0.0
+		var width := minf(float(slot["width"]), 18.0)
+		var pad := _lot_ground_material("plaza_pavement", 0.9, 5.0)
+		_add_lot_pad(root, idx, base, width, width * 0.8, pad, 0.02)
+		var f := _spawn_lot_kit(rng, LOT_FOUNTAIN_MODEL, base + Vector3.UP * 0.05,
+				rng.randf(), rng.randf_range(1.8, 2.6), false)
+		if f != null and _building_clear(f):
+			root.add_child(f)
+			_bind_visibility_range(f)
+		elif f != null:
+			f.free()
 
 
 ## True when every building kit GLB is present and importable.
@@ -1380,16 +1829,17 @@ func _building_clear(root: Node3D) -> bool:
 ## the sidewalk with small gaps and the occasional alley. A candidate that
 ## would reach another stretch of road (the spline folds near itself) is
 ## skipped, leaving a natural gap.
-func _make_street_front(rng: RandomNumberGenerator, occupied: Array[Vector3]) -> Node3D:
+func _make_street_front(rng: RandomNumberGenerator, occupied: Array[Vector3],
+		alley_slots: Array[Dictionary]) -> Node3D:
 	var root := Node3D.new()
 	root.name = "StreetFront"
 	for side in [-1.0, 1.0]:
-		root.add_child(_make_street_front_side(rng, side, occupied))
+		root.add_child(_make_street_front_side(rng, side, occupied, alley_slots))
 	return root
 
 
 func _make_street_front_side(rng: RandomNumberGenerator, side: float,
-		occupied: Array[Vector3]) -> Node3D:
+		occupied: Array[Vector3], alley_slots: Array[Dictionary]) -> Node3D:
 	var root := Node3D.new()
 	var n := sample_count()
 	var sidewalk_outer := def.road_half_width + 7.0
@@ -1431,7 +1881,12 @@ func _make_street_front_side(rng: RandomNumberGenerator, side: float,
 			var yaw := tangent_yaw(i) + (PI if flip else 0.0) + rng.randf_range(-0.04, 0.04)
 			var base := centerline[i] + side_vector(i) * offset
 			base.y = 0.0
-			var cand_advance := along + _front_row_gap(rng)
+			var gi := _front_row_gap_info(rng)
+			# Widen some alleys so a recessed mini-plaza fits inside the opening.
+			var widen: bool = gi["alley"] and rng.randf() < WIDE_ALLEY_CHANCE
+			if widen:
+				gi = {"gap": rng.randf_range(WIDE_ALLEY_MIN, WIDE_ALLEY_MAX), "alley": true}
+			var cand_advance := along + float(gi["gap"])
 			var b := _spawn_kit_building(rng, id, base, yaw, s,
 					-side if flip else side)
 			if b == null:
@@ -1442,6 +1897,13 @@ func _make_street_front_side(rng: RandomNumberGenerator, side: float,
 			_bind_visibility_range(b)
 			root.add_child(b)
 			occupied.append(Vector3(base.x, 0.0, base.z))
+			if widen:
+				alley_slots.append({
+					"idx": i,
+					"side": side,
+					"width": float(gi["gap"]),
+					"along_shift": along + float(gi["gap"]) * 0.5,
+				})
 			placed_advance = cand_advance
 			placed_count += 1
 			break
@@ -1451,11 +1913,13 @@ func _make_street_front_side(rng: RandomNumberGenerator, side: float,
 
 
 ## Arc gap before the next front-row building: usually a slim joint between
-## neighbours, occasionally a wider alley.
-func _front_row_gap(rng: RandomNumberGenerator) -> float:
+## neighbours, occasionally a wider alley (reported so a mini-plaza can fill it).
+func _front_row_gap_info(rng: RandomNumberGenerator) -> Dictionary:
 	if rng.randf() < FRONT_ROW_ALLEY_CHANCE:
-		return rng.randf_range(FRONT_ROW_ALLEY_MIN, FRONT_ROW_ALLEY_MAX)
-	return rng.randf_range(FRONT_ROW_GAP_MIN, FRONT_ROW_GAP_MAX)
+		return {"gap": rng.randf_range(FRONT_ROW_ALLEY_MIN, FRONT_ROW_ALLEY_MAX),
+				"alley": true}
+	return {"gap": rng.randf_range(FRONT_ROW_GAP_MIN, FRONT_ROW_GAP_MAX),
+			"alley": false}
 
 
 ## Fades front-row meshes out far from the camera; the skyline covers the

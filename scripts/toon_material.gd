@@ -13,11 +13,17 @@ const OUTLINE_WIDTH_LIMB := 0.009
 
 
 ## Toon material for a flat colour, optionally multiplied by a texture.
-static func make(color: Color, tex: Texture2D = null, outline_width: float = -1.0) -> ShaderMaterial:
+## `triplanar` projects the texture in world space (box mapping) instead of
+## using the mesh UVs — needed for kit models whose atlas does not match a
+## tiled generated facade/ground texture. `tri_scale` is 1 / texture period (m).
+static func make(color: Color, tex: Texture2D = null, outline_width: float = -1.0,
+		triplanar: bool = false, tri_scale: float = 0.1) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = TOON
 	m.set_shader_parameter("albedo", color)
 	m.set_shader_parameter("use_texture", tex != null)
+	m.set_shader_parameter("triplanar", triplanar)
+	m.set_shader_parameter("tri_scale", tri_scale)
 	if tex != null:
 		m.set_shader_parameter("albedo_tex", tex)
 	if outline_width > 0.0:
@@ -26,10 +32,11 @@ static func make(color: Color, tex: Texture2D = null, outline_width: float = -1.
 
 
 ## Converts an imported PBR material (GLB) into its toon counterpart.
-static func from_base(base: BaseMaterial3D, outline_width: float = -1.0) -> ShaderMaterial:
+static func from_base(base: BaseMaterial3D, outline_width: float = -1.0,
+		triplanar: bool = false, tri_scale: float = 0.1) -> ShaderMaterial:
 	if base == null:
-		return make(Color.WHITE, null, outline_width)
-	return make(base.albedo_color, base.albedo_texture, outline_width)
+		return make(Color.WHITE, null, outline_width, triplanar, tri_scale)
+	return make(base.albedo_color, base.albedo_texture, outline_width, triplanar, tri_scale)
 
 
 static func outline_pass(width: float) -> ShaderMaterial:

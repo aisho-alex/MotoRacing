@@ -207,6 +207,29 @@ DanielZhabotinsk/Ferrari — вперёд +X (`model_yaw = PI/2`), roh3d — +Z
   трассы (по конвенции `tools/check_buildings.gd`), отбрасываются с
   небольшим шагом; первый ряд гаснет дальше 320 м (`visibility_range`),
   горизонт закрывает существующий skyline.
+- Лоты в пустой полосе (city, `urban_canyon`): за первым рядом и перед 48-м
+  поясом `_place_city_lots` ставит ~11 лотов (Молл/скейт-парк/площадь/
+  корт/парковка; первый лот — всегда молл). Молл (`mall.glb`, department
+  store) — 26×9 м, повёрнут длинной осью по трассе, фасад — тайловая
+  SwarmUI-текстура через **трипланар** (`toon.gdshader` → `triplanar`,
+  `ToonMaterial.make(..., triplanar, tri_scale)`), т.к. UV-атлас модели не
+  совпадает с сгенерированной текстурой; скейт-парк (`skatepark.glb`,
+  resource kit рамп) и фонтан (`fountain.glb`) — UV-тоон. Подложки лотов —
+  сгенерированные `plaza_pavement`/`court_paint`/`skate_concrete` (плюс
+  `city/road/asphalt`), корт размечается процедурно (борта, центр, кольца),
+  парковка — разметка + статичные машины из `assets/data/traffic/*.tres`,
+  площадь — фонтан + деревья-билборды. Часть переулков первого ряда
+  расширяется (`WIDE_ALLEY_*`) и в них убирается заглублённая мини-площадь.
+  Лоты живут под нодой `Buildings`, поэтому `tools/check_buildings.gd`
+  проверяет их отступ автоматически; превью — `tools/lot_shot.gd`
+  (`TRACK`, `LOT_INDEX`, `OUT`; прячет первый ряд/скайлайн).
+- SwarmUI-текстуры лотов: `tools/assetgen/gen_model_tex.py` (сеты
+  `mall_wall`, `mall_glass`, `skate_concrete`, `fountain_stone`,
+  `plaza_pavement`, `court_paint` → `assets/environments/city/buildings/tex/`
+  albedo+normal+ORM+license) и `tools/assetgen/retexture_model.py`
+  (`Материал=сет` ремапит baseColorTexture в GLB); `normalize_building.py`
+  получил флаг `flat`/`nogrow` для плоских моделей (скейт-парк/фонтан не
+  «дорастают» до 14 м).
 - SwarmUI: нода SwarmModelTiling роняет ComfyUI-бэкенд на этой установке — не использовать `seamlesstileable`. Инстанс слушает `127.0.0.1:7801` (порт меняется пользователем — проверять `GetNewSession` перед генерацией). Не грузить вторую модель (SDXL) при резидентной — OOM 12 ГБ клинит сессии SwarmUI (лечится перезапуском UI). Z-Image Turbo: CFG 1 — негатив-промпты игнорируются, весь контроль через позитив.
 - Модельный пайплайн (открытые ассеты): `tools/asset_preview.gd` (рендер
   превью пака GLB в Godot: DIR/OUT env), FBX2glTF 0.9.7 (FBX→GLB),
