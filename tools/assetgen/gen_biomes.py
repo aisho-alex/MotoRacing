@@ -76,9 +76,14 @@ def alpine() -> None:
     rough = 0.85 + 0.08 * (grain - 0.5)
     sealife("alpine asphalt", asset_path("environments/alpine/road"), albedo, height, ao, rough, road=True)
 
+    alpine_sky()
+    print("alpine: ok")
+
+
+def alpine_sky() -> None:
     sky = render({
-        "zenith": np.array([0.30, 0.50, 0.88]),
-        "horizon": np.array([0.90, 0.94, 1.00]),
+        "zenith": np.array([0.20, 0.40, 0.85]),
+        "horizon": np.array([0.84, 0.91, 1.00]),
         "ground": np.array([0.55, 0.60, 0.70]),
         "sun_tint": np.array([1.00, 0.97, 0.88]),
         "sun_elev": np.deg2rad(48.0),
@@ -88,7 +93,7 @@ def alpine() -> None:
     out = asset_path("environments/alpine/sky.hdr")
     save_hdr(out, sky)
     write_license(out + ".license", "sky.hdr", SKY_TOOL, "alpine cold noon palette")
-    print("alpine: ok")
+    print("alpine sky: ok")
 
 
 def coast() -> None:
@@ -123,9 +128,14 @@ def coast() -> None:
     rough = 0.88 + 0.05 * (grain - 0.5)
     sealife("coast asphalt", asset_path("environments/coast/road"), albedo, height, ao, rough, road=True)
 
+    coast_sky()
+    print("coast: ok")
+
+
+def coast_sky() -> None:
     sky = render({
-        "zenith": np.array([0.15, 0.40, 0.85]),
-        "horizon": np.array([0.80, 0.92, 1.00]),
+        "zenith": np.array([0.10, 0.34, 0.82]),
+        "horizon": np.array([0.74, 0.88, 1.00]),
         "ground": np.array([0.45, 0.55, 0.60]),
         "sun_tint": np.array([1.00, 0.95, 0.80]),
         "sun_elev": np.deg2rad(55.0),
@@ -135,9 +145,15 @@ def coast() -> None:
     out = asset_path("environments/coast/sky.hdr")
     save_hdr(out, sky)
     write_license(out + ".license", "sky.hdr", SKY_TOOL, "coast vivid noon palette")
-    print("coast: ok")
+    print("coast sky: ok")
 
 
 if __name__ == "__main__":
-    alpine()
-    coast()
+    import sys
+    if "--sky" in sys.argv:
+        # skies only: never touch the Z-Image terrain / procedural roads
+        alpine_sky()
+        coast_sky()
+    else:
+        alpine()
+        coast()

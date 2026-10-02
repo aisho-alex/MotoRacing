@@ -30,11 +30,11 @@ TOOL = "procedural synthesis (tools/assetgen/gen_desert.py)"
 SAND_LIGHT = np.array([0.84, 0.74, 0.50])
 SAND_DARK = np.array([0.66, 0.54, 0.34])
 DUSK = {
-    "zenith": np.array([0.16, 0.17, 0.40]),
-    "horizon": np.array([0.98, 0.58, 0.30]),
+    "zenith": np.array([0.12, 0.14, 0.42]),
+    "horizon": np.array([0.98, 0.55, 0.26]),
     "ground": np.array([0.28, 0.19, 0.12]),
     "sun_tint": np.array([1.05, 0.72, 0.42]),
-    "sun_elev": np.deg2rad(11.0),
+    "sun_elev": np.deg2rad(16.0),
     "sun_azim": np.deg2rad(200.0),
     "sun_power": 30.0,
 }
@@ -122,6 +122,10 @@ def sky() -> None:
 
 
 if __name__ == "__main__":
-    sand()
-    road()
-    sky()
+    import sys
+    if "--sky" in sys.argv:
+        sky()  # skies only: keep the Z-Image terrain / procedural road
+    else:
+        sand()
+        road()
+        sky()

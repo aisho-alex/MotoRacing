@@ -479,7 +479,7 @@ func _build_environment(tdef: TrackDef) -> void:
 		env.volumetric_fog_ambient_inject = 0.20
 		env.volumetric_fog_sky_affect = 0.22
 	else:
-		env.background_energy_multiplier = 1.1
+		env.background_energy_multiplier = 1.0
 		env.ambient_light_energy = 1.15
 		# LINEAR tonemapping keeps the flat, punchy, cartoon-bright look.
 		env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
@@ -488,9 +488,9 @@ func _build_environment(tdef: TrackDef) -> void:
 		env.fog_enabled = true
 		env.fog_light_color = Color(0.72, 0.80, 0.90)
 		env.fog_density = 0.002
-		env.fog_sky_affect = 0.08
+		env.fog_sky_affect = 0.03
 		env.glow_intensity = 0.3
-		env.glow_bloom = 0.04
+		env.glow_bloom = 0.0
 		env.adjustment_brightness = 1.03
 		env.adjustment_contrast = 1.04
 		env.adjustment_saturation = 1.22

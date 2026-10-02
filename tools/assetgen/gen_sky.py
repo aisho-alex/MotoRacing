@@ -15,8 +15,8 @@ W, H = 2048, 1024
 TOOL = "procedural synthesis (tools/assetgen/gen_sky.py)"
 
 CITY = {
-    "zenith": np.array([0.09, 0.20, 0.52]),
-    "horizon": np.array([0.95, 0.72, 0.50]),
+    "zenith": np.array([0.06, 0.16, 0.55]),
+    "horizon": np.array([0.93, 0.63, 0.40]),
     "ground": np.array([0.16, 0.15, 0.13]),
     "sun_tint": np.array([1.00, 0.85, 0.62]),
     "sun_elev": np.deg2rad(34.0),
@@ -36,8 +36,8 @@ CITY_NIGHT = {
 
 # Extra biomes: analytic skies written by main() alongside the city one.
 CANYON = {
-    "zenith": np.array([0.16, 0.30, 0.58]),
-    "horizon": np.array([0.92, 0.72, 0.46]),
+    "zenith": np.array([0.12, 0.26, 0.62]),
+    "horizon": np.array([0.92, 0.66, 0.40]),
     "ground": np.array([0.30, 0.18, 0.12]),
     "sun_tint": np.array([1.00, 0.88, 0.62]),
     "sun_elev": np.deg2rad(58.0),
@@ -46,8 +46,8 @@ CANYON = {
 }
 
 SAKURA = {
-    "zenith": np.array([0.22, 0.42, 0.75]),
-    "horizon": np.array([0.96, 0.85, 0.86]),
+    "zenith": np.array([0.18, 0.38, 0.80]),
+    "horizon": np.array([0.96, 0.80, 0.82]),
     "ground": np.array([0.20, 0.24, 0.16]),
     "sun_tint": np.array([1.00, 0.92, 0.78]),
     "sun_elev": np.deg2rad(42.0),
@@ -89,7 +89,11 @@ def render(palette: dict) -> np.ndarray:
     cos_sun = np.clip(dx * sun[0] + dy * sun[1] + dz * sun[2], -1.0, 1.0)
 
     up = dy
-    t = np.clip(up, 0.0, 1.0) ** 0.45
+    # The chase camera looks slightly down, so almost all visible sky sits in
+    # the first ~15 deg. Confine the warm horizon colour to a thin band and
+    # smoothstep into a full saturated zenith dome above it.
+    band = np.clip(up / 0.16, 0.0, 1.0)
+    t = band * band * (3.0 - 2.0 * band)
     sky = horizon[None, None, :] * (1.0 - t[..., None]) + zenith[None, None, :] * t[..., None]
 
     below = np.clip(-up, 0.0, 1.0)
@@ -99,7 +103,8 @@ def render(palette: dict) -> np.ndarray:
 
     rgb = np.where((up > 0)[..., None], sky, ground_col)
 
-    glow = 0.35 * (np.clip(cos_sun, 0.0, 1.0) ** 12.0) + 1.1 * (np.clip(cos_sun, 0.0, 1.0) ** 350.0)
+    # Tight halo: a broad soft term washed the whole sky toward white.
+    glow = 0.15 * (np.clip(cos_sun, 0.0, 1.0) ** 18.0) + 1.1 * (np.clip(cos_sun, 0.0, 1.0) ** 350.0)
     rgb += glow[..., None] * sun_tint[None, None, :] * np.clip(up, 0.0, 1.0)[..., None]
     disc = (cos_sun > np.cos(np.deg2rad(1.2))).astype(np.float64)
     rgb += disc[..., None] * sun_tint[None, None, :] * palette["sun_power"]

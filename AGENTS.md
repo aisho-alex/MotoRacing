@@ -33,8 +33,14 @@
 - Резкость: `project.godot` — MSAA 4x, anisotropic 16, `texture_mipmap_bias=-0.35`.
 - Свет/грейдинг — `main.gd _build_environment()`: солнце 4-сплит PSSM, резкие
   тени; день — LINEAR-тонмаппинг, насыщенность 1.22, лёгкий туман; ночь (если
-  включена) — ACES чуть светлее. Небо Сити — дневное (`gen_sky.py` → `CITY`);
+  включена) — ACES чуть светлее. Небо — тонкая тёплая полоса у горизонта и
+  насыщенный купол (`gen_sky.py render()`); генераторы: `gen_sky.py`
+  (city/canyon/sakura/volcano), `gen_biomes.py --sky` (alpine/coast),
+  `gen_desert.py --sky` (desert) — флаг `--sky` не трогает террейны/дороги.
   `CITY_NIGHT` зарезервирован под будущие ночные city-трассы.
+- Фонари (`track_builder._make_street_lights`): toon-столб/голова с обводкой,
+  тёплая светящаяся линза (днём тоже) и аддитивное хало-биллборд; ночью —
+  OmniLight + светопул. Скриншот — `tools/streetlight_shot.gd` (xvfb-run).
 
 ## Мотоциклы (Road Rash)
 

@@ -100,6 +100,7 @@ var _kit_aabb_cache: Dictionary = {}
 var _kit_tuned_materials: Dictionary = {}
 var _kit_toon_materials: Dictionary = {}  # source material -> shared toon material
 var _light_pool_mesh: QuadMesh
+var _lamp_halo_tex: GradientTexture2D
 var _light_pool_material: StandardMaterial3D
 var _puddle_mesh: QuadMesh
 var _puddle_material: StandardMaterial3D
@@ -582,29 +583,36 @@ func _make_ground() -> StaticBody3D:
 func _make_street_lights() -> Node3D:
 	var root := Node3D.new()
 	root.name = "StreetLights"
+	# Cartoon lamp: chunky toon pole/arm/head with a cel outline, a warm lens
+	# that glows even in daylight, and a soft additive halo billboard.
+	var pole_mat := ToonMaterial.make(Color(0.11, 0.12, 0.15), null,
+			ToonMaterial.OUTLINE_WIDTH_BODY)
 	var pole_mesh := CylinderMesh.new()
-	pole_mesh.top_radius = 0.09
-	pole_mesh.bottom_radius = 0.15
+	pole_mesh.top_radius = 0.10
+	pole_mesh.bottom_radius = 0.17
 	pole_mesh.height = 6.8
-	pole_mesh.radial_segments = 8
-	var pole_mat := StandardMaterial3D.new()
-	pole_mat.albedo_color = Color(0.035, 0.045, 0.065)
-	pole_mat.roughness = 0.38
-	pole_mat.metallic = 0.75
+	pole_mesh.radial_segments = 12
 	pole_mesh.material = pole_mat
 	var arm_mesh := BoxMesh.new()
-	arm_mesh.size = Vector3(0.12, 0.12, 2.2)
+	arm_mesh.size = Vector3(0.14, 0.14, 2.2)
 	arm_mesh.material = pole_mat
 	var head_mesh := BoxMesh.new()
-	head_mesh.size = Vector3(0.48, 0.14, 0.72)
-	var head_mat := StandardMaterial3D.new()
-	head_mat.albedo_color = Color(1.0, 0.78, 0.42)
-	head_mat.roughness = 0.22
-	if def.night_racing:
-		head_mat.emission_enabled = true
-		head_mat.emission = Color(1.0, 0.62, 0.22)
-		head_mat.emission_energy_multiplier = 5.0
+	head_mesh.size = Vector3(0.60, 0.20, 0.95)
+	var head_mat := ToonMaterial.make(Color(0.16, 0.17, 0.20), null,
+			ToonMaterial.OUTLINE_WIDTH_BODY)
 	head_mesh.material = head_mat
+	var lens_mesh := BoxMesh.new()
+	lens_mesh.size = Vector3(0.48, 0.06, 0.80)
+	var lens_mat := StandardMaterial3D.new()
+	lens_mat.albedo_color = Color(1.0, 0.90, 0.62)
+	lens_mat.roughness = 0.3
+	lens_mat.emission_enabled = true
+	lens_mat.emission = Color(1.0, 0.83, 0.50)
+	lens_mat.emission_energy_multiplier = 2.4 if def.night_racing else 1.6
+	lens_mesh.material = lens_mat
+	var halo_mesh := QuadMesh.new()
+	halo_mesh.size = Vector2(1.6, 1.6)
+	halo_mesh.material = _lamp_halo_material()
 	var step := maxi(def.streetlight_spacing, 1)
 	for i in range(12, centerline.size() - 4, step):
 		var side := 1.0 if ((i / step) % 2 == 0) else -1.0
@@ -629,6 +637,16 @@ func _make_street_lights() -> Node3D:
 		head.position = head_pos
 		head.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(head)
+		var lens := MeshInstance3D.new()
+		lens.mesh = lens_mesh
+		lens.position = head_pos - Vector3.UP * 0.14
+		lens.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(lens)
+		var halo := MeshInstance3D.new()
+		halo.mesh = halo_mesh
+		halo.position = lens.position - Vector3.UP * 0.02
+		halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(halo)
 		# light + glowing road pool only make sense after dark
 		if def.night_racing:
 			var light := OmniLight3D.new()
@@ -682,6 +700,39 @@ func _make_light_pool() -> MeshInstance3D:
 	mi.rotation_degrees.x = -90.0
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi
+
+
+## Soft additive halo billboard for the cartoon lamp lens.
+func _lamp_halo_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.albedo_color = Color(1.0, 0.82, 0.5, 0.5)
+	mat.albedo_texture = _lamp_halo_texture()
+	mat.disable_receive_shadows = true
+	mat.no_depth_test = false
+	return mat
+
+
+func _lamp_halo_texture() -> GradientTexture2D:
+	if _lamp_halo_tex == null:
+		var grad := Gradient.new()
+		grad.offsets = PackedFloat32Array([0.0, 0.35, 1.0])
+		grad.colors = PackedColorArray([
+			Color(1.0, 1.0, 1.0, 1.0),
+			Color(1.0, 0.85, 0.55, 0.35),
+			Color(1.0, 0.7, 0.4, 0.0),
+		])
+		_lamp_halo_tex = GradientTexture2D.new()
+		_lamp_halo_tex.gradient = grad
+		_lamp_halo_tex.fill = GradientTexture2D.FILL_RADIAL
+		_lamp_halo_tex.fill_from = Vector2(0.5, 0.5)
+		_lamp_halo_tex.fill_to = Vector2(1.0, 0.5)
+		_lamp_halo_tex.width = 128
+		_lamp_halo_tex.height = 128
+	return _lamp_halo_tex
 
 
 func _make_reflection_probes() -> Node3D:
