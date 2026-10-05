@@ -96,7 +96,9 @@ func _ready() -> void:
 	traffic.setup(track, bike)
 	traffic.near_miss.connect(_on_near_miss)
 
+	var mobile := TouchControls.mobile_layout_active()
 	add_child(TouchControls.new())
+	hud.set_mobile(mobile)
 
 
 func _spawn_opponents() -> void:
@@ -496,3 +498,4 @@ func _build_environment(tdef: TrackDef) -> void:
 		env.adjustment_saturation = 1.22
 	we.environment = env
 	add_child(we)
+	GraphicsQuality.apply_env(env, sun, Game.effective_quality(), tdef.night_racing)

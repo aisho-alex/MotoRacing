@@ -35,6 +35,9 @@ const TRACK_IDS := [
 ]
 const SAVE_PATH := "user://progress.cfg"
 
+## Picture quality presets exposed in the menu; "auto" picks by platform.
+const QUALITY_IDS := ["auto", "low", "medium", "high"]
+
 var bike_index := 0
 var track_index := 0
 var track_tier := 0  # 0-based difficulty level on the selected track
@@ -50,10 +53,39 @@ var owned_bikes := []  # shop bike ids bought with credits
 var bosses_beaten := {}  # track_id -> true once the boss race was won
 var selected_skin := "stock"  # player rider skin id (global, all bikes)
 var owned_skins := []  # skins bought with credits
+var quality := "auto"  # picture quality: one of QUALITY_IDS
 
 
 func _ready() -> void:
 	_load_progress()
+	GraphicsQuality.apply_viewport(get_viewport(), effective_quality())
+
+
+## Resolves "auto" to the platform default (mobile -> low, desktop -> high).
+func effective_quality() -> String:
+	if quality == "auto":
+		return "low" if TouchControls.mobile_layout_active() else "high"
+	return quality if quality in GraphicsQuality.LEVELS else "high"
+
+
+func quality_label() -> String:
+	if quality == "auto":
+		return "AUTO (%s)" % effective_quality().to_upper()
+	return quality.to_upper()
+
+
+func set_quality(id: String) -> bool:
+	if id not in QUALITY_IDS:
+		return false
+	quality = id
+	GraphicsQuality.apply_viewport(get_viewport(), effective_quality())
+	_save_progress()
+	return true
+
+
+func cycle_quality(dir: int) -> void:
+	var pos := maxi(QUALITY_IDS.find(quality), 0)
+	set_quality(QUALITY_IDS[wrapi(pos + dir, 0, QUALITY_IDS.size())])
 
 
 ## Unlocks: Scrambler is free; Sport after finishing any race; Cruiser after a
@@ -534,6 +566,9 @@ func _load_progress() -> void:
 	# validates after bosses_beaten is restored (rose/gold depend on it)
 	if not is_skin_unlocked(selected_skin):
 		selected_skin = "stock"
+	quality = String(cfg.get_value("graphics", "quality", "auto"))
+	if quality not in QUALITY_IDS:
+		quality = "auto"
 
 
 func _save_progress() -> void:
@@ -549,6 +584,7 @@ func _save_progress() -> void:
 	cfg.set_value("progress", "bosses_beaten", bosses_beaten)
 	cfg.set_value("progress", "selected_skin", selected_skin)
 	cfg.set_value("progress", "owned_skins", owned_skins)
+	cfg.set_value("graphics", "quality", quality)
 	for id in BIKE_IDS:
 		cfg.set_value("upgrades", id, upgrade_levels(id))
 	for id in TRACK_IDS:

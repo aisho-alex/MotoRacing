@@ -51,15 +51,12 @@ func _part() -> String:
 
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.06, 0.07, 0.11)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	add_child(Ui.backdrop())
 
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 6)
+	box.add_theme_constant_override("separation", 4)
 	box.offset_left = 220
 	box.offset_right = -220
 	box.offset_top = 8
@@ -78,20 +75,20 @@ func _build_ui() -> void:
 	box.add_child(_bike_row())
 
 	var stats_panel := PanelContainer.new()
-	stats_panel.add_theme_stylebox_override("panel", _panel_style())
+	stats_panel.add_theme_stylebox_override("panel", _panel_style(Ui.CYAN))
 	var stats := VBoxContainer.new()
 	stats.add_theme_constant_override("separation", 2)
-	stats.add_child(_label("PERFORMANCE", 18, DIM))
+	stats.add_child(_label("PERFORMANCE", 18, Ui.CYAN))
 	for row in STAT_ROWS:
 		stats.add_child(_stat_row(row))
 	stats_panel.add_child(stats)
 	box.add_child(stats_panel)
 
 	var parts_panel := PanelContainer.new()
-	parts_panel.add_theme_stylebox_override("panel", _panel_style())
+	parts_panel.add_theme_stylebox_override("panel", _panel_style(Ui.GREEN))
 	var parts := VBoxContainer.new()
 	parts.add_theme_constant_override("separation", 4)
-	parts.add_child(_label("UPGRADES", 18, DIM))
+	parts.add_child(_label("UPGRADES", 18, Ui.GREEN))
 	for i in BikeTuning.PARTS.size():
 		parts.add_child(_part_row(i))
 	parts_panel.add_child(parts)
@@ -105,7 +102,7 @@ func _build_ui() -> void:
 	_hint_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hint_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	footer.add_child(_hint_label)
-	var back := _button("BACK", 22)
+	var back := Ui.outline_button("BACK", 22, ACCENT)
 	back.pressed.connect(_go_back)
 	back.size_flags_horizontal = Control.SIZE_SHRINK_END
 	footer.add_child(back)
@@ -116,15 +113,15 @@ func _bike_row() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 24)
-	row.add_child(_label("BIKE", 32, DIM))
-	var prev := _button("<", 32)
+	row.add_child(_label("BIKE", 32, ACCENT))
+	var prev := Ui.filled_button("<", 32, ACCENT)
 	prev.pressed.connect(_cycle_bike.bind(-1))
 	row.add_child(prev)
 	_bike_label = _label("", 30, Color.WHITE)
 	_bike_label.custom_minimum_size = Vector2(320, 0)
 	_bike_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	row.add_child(_bike_label)
-	var next := _button(">", 32)
+	var next := Ui.filled_button(">", 32, ACCENT)
 	next.pressed.connect(_cycle_bike.bind(1))
 	row.add_child(next)
 	return row
@@ -164,7 +161,7 @@ func _part_row(index: int) -> HBoxContainer:
 	cost.custom_minimum_size = Vector2(150, 0)
 	cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(cost)
-	var buy := _button("BUY", 22)
+	var buy := Ui.filled_button("BUY", 22, Ui.GREEN)
 	buy.custom_minimum_size = Vector2(130, 0)
 	buy.pressed.connect(_buy_selected.bind(index))
 	h.add_child(buy)
@@ -174,22 +171,22 @@ func _part_row(index: int) -> HBoxContainer:
 
 func _skin_panel() -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _panel_style())
+	panel.add_theme_stylebox_override("panel", _panel_style(Ui.PURPLE))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
-	v.add_child(_label("RIDER SKIN", 18, DIM))
+	v.add_child(_label("RIDER SKIN", 18, Ui.PURPLE))
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 24)
-	var prev := _button("<", 28)
+	var prev := Ui.filled_button("<", 28, Ui.PURPLE)
 	prev.pressed.connect(_cycle_skin.bind(-1))
 	row.add_child(prev)
 	_skin_label = _label("", 26, Color.WHITE)
 	_skin_label.custom_minimum_size = Vector2(360, 0)
 	_skin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	row.add_child(_skin_label)
-	var next := _button(">", 28)
+	var next := Ui.filled_button(">", 28, Ui.PURPLE)
 	next.pressed.connect(_cycle_skin.bind(1))
 	row.add_child(next)
 	v.add_child(row)
@@ -210,7 +207,7 @@ func _skin_panel() -> PanelContainer:
 	brow.add_theme_constant_override("separation", 18)
 	_skin_cost = _label("", 20, DIM)
 	brow.add_child(_skin_cost)
-	_skin_buy = _button("EQUIP", 22)
+	_skin_buy = Ui.filled_button("EQUIP", 22, Ui.PURPLE)
 	_skin_buy.custom_minimum_size = Vector2(150, 0)
 	_skin_buy.pressed.connect(_buy_or_equip_skin)
 	brow.add_child(_skin_buy)
@@ -475,19 +472,10 @@ func _bar(value: float, fill: Color) -> ProgressBar:
 	return bar
 
 
-func _panel_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.10, 0.11, 0.16, 0.9)
-	style.border_color = Color(1, 1, 1, 0.08)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(6)
-	return style
+func _panel_style(tint: Color = Color(1, 1, 1)) -> StyleBoxFlat:
+	return Ui.panel_style(Color(0.10, 0.11, 0.16, 0.9),
+			Color(tint.r, tint.g, tint.b, 0.35), 10, 1, 4)
 
 
 func _label(text: String, size: int, color: Color) -> Label:
 	return Ui.label(text, size, color)
-
-
-func _button(text: String, size: int) -> Button:
-	return Ui.button(text, size)

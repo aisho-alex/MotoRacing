@@ -133,6 +133,18 @@ func _update_distance_visibility() -> void:
 		visible = true
 
 
+## Keyboard/touch readout for the player bike: x = steer, y = throttle,
+## z = nitro request (0/1). Nitro implies throttle so a single finger on the
+## mobile nitro button still accelerates; braking (throttle < 0) still wins.
+func _player_input() -> Vector3:
+	var throttle := Input.get_axis("brake", "accelerate")
+	var want_nitro := Input.is_action_pressed("nitro")
+	if want_nitro and throttle >= 0.0:
+		throttle = 1.0
+	return Vector3(Input.get_axis("steer_left", "steer_right"), throttle,
+			1.0 if want_nitro else 0.0)
+
+
 func _physics_process(delta: float) -> void:
 	var steer := 0.0
 	var throttle := 0.0
@@ -147,9 +159,10 @@ func _physics_process(delta: float) -> void:
 			if driver.attack_kind != "":
 				_try_attack(driver.attack_side, driver.attack_kind)
 		else:
-			steer = Input.get_axis("steer_left", "steer_right")
-			throttle = Input.get_axis("brake", "accelerate")
-			want_nitro = Input.is_action_pressed("nitro")
+			var p := _player_input()
+			steer = p.x
+			throttle = p.y
+			want_nitro = p.z != 0.0
 			if Input.is_action_pressed("attack_left"):
 				_try_attack(-1.0, "punch")
 			if Input.is_action_pressed("attack_right"):

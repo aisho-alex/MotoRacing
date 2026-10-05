@@ -1,0 +1,15 @@
+asset: assets/environments/city/trees/*.glb
+license: CC Attribution 4.0 (CC-BY 4.0)
+files:
+  tree_linden.glb — "Linden" — Asia Matusik
+      https://sketchfab.com/3d-models/linden-5d2541d5e24f424ca87f610955eebc9d
+  tree_oak.glb — "Oak tree" — evolveduk
+      https://sketchfab.com/3d-models/oak-tree-6468dd4d3eb240ef902b9057d9913606
+  tree_beech.glb — "Beech tree" — evolveduk
+      https://sketchfab.com/3d-models/beech-tree-0983d8933531491f9be71c669e8a907b
+  tree_birch.glb — "Birch tree" — evolveduk
+      https://sketchfab.com/3d-models/birch-tree-aa842dffd9654d33b8b91170ce83c172
+changes: textures externalized to sibling *.png; node transforms baked and mesh
+         grounded/centred at build time (scripts/track_builder.gd), materials
+         converted to the game's flat-cel toon shaders (scripts/toon_material.gd)
+date: 2026-10-02

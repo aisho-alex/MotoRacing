@@ -31,6 +31,11 @@
   `tools/assetgen/gen_props.py` (Qwen-Image, хромакей). Дома building-kit GLB
   cel-ятся в рантайме (`track_builder._tune_kit_materials` → `ToonMaterial`).
 - Резкость: `project.godot` — MSAA 4x, anisotropic 16, `texture_mipmap_bias=-0.35`.
+- Качество картинки (`scripts/graphics_quality.gd`): пресеты LOW/MEDIUM/HIGH
+  (3D render scale, MSAA, тени, ночной Forward+ пост-стек) + AUTO в меню
+  (строка QUALITY; мобилки → LOW, десктоп → HIGH). Выбор в `Game.quality`
+  (`QUALITY_IDS`, сейв `graphics/quality`), viewport применяет `Game._ready`,
+  env/солнце — `main.gd _build_environment`. Проверка — `tools/check_quality.gd`.
 - Свет/грейдинг — `main.gd _build_environment()`: солнце 4-сплит PSSM, резкие
   тени; день — LINEAR-тонмаппинг, насыщенность 1.22, лёгкий туман; ночь (если
   включена) — ACES чуть светлее. Небо — тонкая тёплая полоса у горизонта и
@@ -117,10 +122,32 @@
 - Проверки баланса/магазина/кампании/боя/механик (должны быть PASS):
   `tools/check_tuning.gd`, `tools/check_shop.gd`, `tools/check_campaign.gd`,
   `tools/check_combat.gd`, `tools/check_mechanics.gd`, `tools/check_rider.gd`,
-  `tools/check_skins.gd`, `tools/check_traffic_orient.gd`, `tools/check_buildings.gd`.
+  `tools/check_skins.gd`, `tools/check_traffic_orient.gd`, `tools/check_buildings.gd`,
+  `tools/check_touch.gd`, `tools/check_quality.gd`.
 - Скриншот байка крупным планом: `tools/bike_close_shot.gd` (через `xvfb-run`;
   POSE=punch|kick|crash для боевых поз). Превью трасс/гаража — `tools/gen_track.gd`,
   `tools/preview_shot.gd` (`SHOT=menu|race|garage`).
+
+## Мобильное управление
+
+- `scripts/touch_controls.gd` (`TouchControls`, CanvasLayer): пад рисуется кодом,
+  показывается при `DisplayServer.is_touchscreen_available()` (F4 — тумблер на
+  десктопе, `FORCE_TOUCH=1` — для скриншотов). Кнопки — PNG-иконки
+  (`assets/ui/touch/*.png`, генератор `tools/assetgen/gen_touch_icons.py`,
+  белые силуэты + tint): педали газа/тормоза — силуэты педалей, нитро — пламя,
+  удары — кулак/ботинок. Раскладка в относительных единицах (доля высоты
+  вьюпорта), единый `_layout()` для визуала и хит-тестов.
+- Схема: слева внизу — аналоговая зона руления (drag, сила = позиция X,
+  инжект `Input.action_press("steer_left/right", strength)` → `Input.get_axis`
+  в `race_bike.gd`), над зоной в ряд удары; справа внизу — педали газа
+  (крупная) и тормоза, а **нитро — прямо над педалью газа** (правый большой
+  палец рулит газом и давит нитро вторым пальцем, не бросая газ). Зажатое
+  нитро само даёт тягу (`RaceBike._player_input`: nitro ⇒ throttle, тормоз
+  сильнее), так что одного пальца на нитро достаточно. Мульти-тач: газ+нитро
+  держатся одновременно (у каждого пальца свой `index → action`).
+- HUD на мобильном (`Hud.set_mobile`): блок скорости/здоровья/нитро — по центру
+  внизу, клавиатурная подсказка скрыта; bottom-углы отданы паду.
+- Проверка раскладки/мульти-тача/аналога — `tools/check_touch.gd` (PASS).
 
 ## Трассы
 

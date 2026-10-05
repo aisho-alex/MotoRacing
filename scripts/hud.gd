@@ -15,6 +15,8 @@ var _nitro_gauge: NitroGauge
 var _health_bar: ProgressBar
 var _health_fill: StyleBoxFlat
 var _shield_label: Label
+var _speed_box: VBoxContainer
+var _hint: Label
 var _center_big: Label
 var _center_sub: Label
 var _toast_label: Label
@@ -49,6 +51,7 @@ func _ready() -> void:
 
 	var speed_box := VBoxContainer.new()
 	add_child(speed_box)
+	_speed_box = speed_box
 	var health_caption := _make_label("HEALTH", 22)
 	health_caption.label_settings.font_color = Color(1.0, 0.45, 0.42)
 	speed_box.add_child(health_caption)
@@ -97,6 +100,7 @@ func _ready() -> void:
 	add_child(hint)
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT,
 			Control.PRESET_MODE_MINSIZE, 14)
+	_hint = hint
 
 	var center := VBoxContainer.new()
 	add_child(center)
@@ -124,6 +128,15 @@ func set_police(active: bool) -> void:
 
 func set_shield(active: bool) -> void:
 	_shield_label.visible = active
+
+
+## Touch build: the bottom corners host the virtual pad, so centre the readouts
+## and drop the keyboard hint.
+func set_mobile(on: bool) -> void:
+	_hint.visible = not on
+	_speed_box.set_anchors_and_offsets_preset(
+			Control.PRESET_CENTER_BOTTOM if on else Control.PRESET_BOTTOM_LEFT,
+			Control.PRESET_MODE_MINSIZE, 18 if on else 16)
 
 
 func update_race_info(cur: float, best: float, last: float) -> void:

@@ -5,6 +5,7 @@ extends RefCounted
 ## outline (assets/shaders/toon_outline.gdshader) used as `next_pass`.
 
 const TOON := preload("res://assets/shaders/toon.gdshader")
+const FOLIAGE := preload("res://assets/shaders/toon_foliage.gdshader")
 const OUTLINE := preload("res://assets/shaders/toon_outline.gdshader")
 
 const OUTLINE_COLOR := Color(0.04, 0.04, 0.06)
@@ -37,6 +38,21 @@ static func from_base(base: BaseMaterial3D, outline_width: float = -1.0,
 	if base == null:
 		return make(Color.WHITE, null, outline_width, triplanar, tri_scale)
 	return make(base.albedo_color, base.albedo_texture, outline_width, triplanar, tri_scale)
+
+
+## Double-sided, alpha-scissored toon material for foliage/bark cards. Use for
+## imported materials whose leaves carry alpha (transparency != DISABLED) or
+## that are flagged double-sided.
+static func make_leaf(color: Color, tex: Texture2D = null,
+		alpha_scissor: float = 0.35) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = FOLIAGE
+	m.set_shader_parameter("albedo", color)
+	m.set_shader_parameter("use_texture", tex != null)
+	m.set_shader_parameter("alpha_scissor", alpha_scissor)
+	if tex != null:
+		m.set_shader_parameter("albedo_tex", tex)
+	return m
 
 
 static func outline_pass(width: float) -> ShaderMaterial:

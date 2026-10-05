@@ -6,6 +6,7 @@ extends SceneTree
 ##   * near-miss: clean tight pass pays nitro, contact/wide passes do not, chain x2
 ##   * shield pickup / oil slick: combat immunity + temporary grip loss
 ##   * cash pickup (player-only credits) and traffic cone (speed-gated damage)
+##   * mobile nitro: holding nitro alone implies throttle, braking overrides it
 ## and the pickup placement on every track (counts, no shared slots).
 ## The real progress.cfg is snapshotted and restored afterwards, because records
 ## are persisted through Game._save_progress().
@@ -52,6 +53,7 @@ func _process(_delta: float) -> bool:
 	failures += _check_records()
 	failures += _check_shield_and_oil()
 	failures += _check_cash_and_cone()
+	failures += _check_nitro_throttle()
 	failures += _check_pickup_placement()
 	_restore(SAVE, backup)
 	print("RESULT: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
@@ -151,6 +153,42 @@ func _check_traffic_pickups() -> int:
 		failures += 1
 	for n in [nitro_pickup, health_pickup, track, traffic, traffic2, traffic3, racer, racer2, racer3]:
 		n.queue_free()
+	return failures
+
+
+## Mobile: holding nitro alone must imply throttle (one finger is enough), while
+## braking still overrides the boost.
+func _check_nitro_throttle() -> int:
+	var failures := 0
+	var bike = _make_bike()
+	bike.nitro = 50.0
+	Input.action_press("nitro")
+	var p: Vector3 = bike._player_input()
+	if p.y <= 0.0 or p.z == 0.0:
+		print("nitro: holding nitro alone did not imply throttle (%s)" % str(p))
+		failures += 1
+	bike._update_nitro(0.5, p.z != 0.0 and p.y > 0.0)
+	if not bike.nitro_active or bike.nitro >= 50.0:
+		print("nitro: throttle-implied boost did not burn (active=%s nitro=%.1f)"
+				% [bike.nitro_active, bike.nitro])
+		failures += 1
+	Input.action_release("nitro")
+	# brake + nitro -> brake wins, no boost
+	bike.nitro = 50.0
+	bike.nitro_active = false
+	Input.action_press("nitro")
+	Input.action_press("brake")
+	var p2: Vector3 = bike._player_input()
+	if p2.y >= 0.0:
+		print("nitro: brake did not win over nitro (throttle %.2f)" % p2.y)
+		failures += 1
+	bike._update_nitro(0.5, p2.z != 0.0 and p2.y > 0.0)
+	if bike.nitro_active:
+		print("nitro: boost engaged while braking")
+		failures += 1
+	Input.action_release("nitro")
+	Input.action_release("brake")
+	bike.queue_free()
 	return failures
 
 

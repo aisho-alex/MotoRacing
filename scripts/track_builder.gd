@@ -36,11 +36,14 @@ const CURB_KIT: Array[String] = ["curb_straight_a"]
 ## Arc length between placed curb segments (m); slightly under the 1 m mesh so
 ## consecutive segments overlap and the strip stays continuous on curves.
 const CURB_STEP := 0.8
-const CITY_BUILDING_MIN_LATERAL := 48.0
+const CITY_BUILDING_MIN_LATERAL := 34.0
 const CITY_BUILDING_FOOTPRINT_RADIUS := 19.0
 ## Clearance between the road edge and any decor footprint candidate (m).
 const ROAD_DECOR_MARGIN := 3.5
-const CITY_BUILDING_MIN_CENTER_DISTANCE := 42.0
+const CITY_BUILDING_MIN_CENTER_DISTANCE := 24.0
+## Second-belt buildings are kept further than the front row so the belt stays
+## drawn across a wider stretch (the front wall already covers the near view).
+const BELT_VIS_RANGE := 480.0
 const CITY_SKYLINE_FOOTPRINT_RADIUS := 16.0
 const CITY_SKYLINE_MIN_GAP := 26.0
 ## Real-mesh building kit for the city biome (see docs/assets.md, section 4).
@@ -64,7 +67,7 @@ const FRONT_ROW_SETBACK_MIN := 1.2
 const FRONT_ROW_SETBACK_MAX := 3.2
 const FRONT_ROW_GAP_MIN := 1.0
 const FRONT_ROW_GAP_MAX := 4.0
-const FRONT_ROW_ALLEY_CHANCE := 0.06
+const FRONT_ROW_ALLEY_CHANCE := 0.10
 const FRONT_ROW_ALLEY_MIN := 6.0
 const FRONT_ROW_ALLEY_MAX := 10.0
 const FRONT_ROW_SCALE_MIN := 0.9
@@ -105,9 +108,51 @@ const LOT_FOOTPRINT_RADIUS := 19.0
 const LOT_MIN_GAP := 16.0
 ## Wide alleys in the street wall: with this chance an alley is widened and a
 ## recessed mini-plaza (fountain + trees) is tucked inside it.
-const WIDE_ALLEY_CHANCE := 0.55
+const WIDE_ALLEY_CHANCE := 0.80
 const WIDE_ALLEY_MIN := 13.0
 const WIDE_ALLEY_MAX := 20.0
+
+## --- Road-side dressing (fills the bare sidewalk strip and the see-through
+## gaps in the street wall). Separate RNG from the wall so the layout is stable.
+## Everything sits beyond road_half + 0.5, so tools/check_buildings.gd still
+## validates it automatically. ---------------------------------------------
+## Street trees: 3D GLBs (see TREE_KIT) set along the outer sidewalk.
+const SIDEWALK_TREE_STEP := 17.0
+const SIDEWALK_TREE_JITTER := 5.0
+const SIDEWALK_TREE_LATERAL := 6.3
+## Kiosk + bench + bin clusters, one every N metres per side.
+const SIDEWALK_KIOSK_STEP := 78.0
+## Every Nth front-row slot is replaced by an open lot cut into the wall
+## (parking / mini skate / plaza kiosk), so content is visible from the road.
+const WALL_CUTOUT_PERIOD := 8
+const WALL_CUTOUT_WIDTH := 22.0
+const WALL_CUTOUT_DEPTH := 13.0
+
+## --- 3D street trees (natural Sketchfab GLBs, CC-BY) -----------------------
+## Loaded once, baked to a single grounded mesh per variant and drawn as a
+## MultiMesh (one draw call per variant for the whole track). Placed on the
+## sidewalk and in lot/plaza/cutout greens.
+const TREE_KIT_DIR := "res://assets/environments/city/trees"
+const TREE_KIT: Array[String] = [
+	"tree_linden", "tree_oak", "tree_beech", "tree_birch",
+]
+
+## --- Far belt + compact infill: fill the mid/far ground so the dark city
+## asphalt is not an empty void when looking sideways. ----------------------
+const FAR_BELT_COUNT := 46
+const FAR_BELT_LATERAL_MIN := 60.0
+const FAR_BELT_LATERAL_MAX := 112.0
+const FAR_BELT_GAP := 28.0
+const FAR_BELT_FOOTPRINT := 16.0
+const FAR_BELT_VIS_RANGE := 700.0
+## Small blocks that also fit the ~40 m corridors where the splice folds back
+## on itself (front row and belts get rejected there).
+const COMPACT_COUNT := 30
+const COMPACT_LATERAL_MIN := 10.0
+const COMPACT_LATERAL_MAX := 112.0
+const COMPACT_GAP := 17.0
+const COMPACT_FOOTPRINT := 8.0
+const COMPACT_VIS_RANGE := 520.0
 
 var def: TrackDef
 
@@ -132,6 +177,11 @@ var _puddle_material: StandardMaterial3D
 ## Boost-pad spots are deterministic per track, so compute them once.
 var _pad_spots_ready := false
 var _pad_spots_cache: Array[int] = []
+## Street-tree batch (Kenney GLBs -> MultiMesh per variant).
+var _tree_meshes: Array[Mesh] = []
+var _tree_heights: Array[float] = []
+var _tree_xforms: Array[Array] = []
+var _trees_loaded := false
 
 
 func build() -> void:
@@ -264,7 +314,8 @@ static func _catmull(p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, t: floa
 ## A ribbon along the centerline. UVs are in tile units on both axes so the
 ## road texture tiles seamlessly along the lap.
 func _make_ribbon(o_hi: float, o_lo: float, y: float, color: Color, rough: float,
-		use_road_maps := false, emission_energy := 0.0) -> MeshInstance3D:
+		use_road_maps := false, emission_energy := 0.0,
+		mat_override: Material = null) -> MeshInstance3D:
 	var n := centerline.size()
 	var tile := maxf(def.road_tile_length, 0.5)
 	var verts := PackedVector3Array()
@@ -297,6 +348,11 @@ func _make_ribbon(o_hi: float, o_lo: float, y: float, color: Color, rough: float
 	arrays[Mesh.ARRAY_INDEX] = idx
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	if mat_override != null:
+		mesh.surface_set_material(0, mat_override)
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		return mi
 	var mat := StandardMaterial3D.new()
 	if use_road_maps:
 		_apply_road_maps(mat)
@@ -392,11 +448,40 @@ func _make_sidewalks() -> Node3D:
 	root.name = "Sidewalks"
 	var inner := def.road_half_width + 0.45
 	var outer := def.road_half_width + 7.0
-	root.add_child(_make_ribbon(outer, inner, SIDEWALK_Y, Color(0.115, 0.13, 0.16), 0.78))
-	root.add_child(_make_ribbon(-inner, -outer, SIDEWALK_Y, Color(0.115, 0.13, 0.16), 0.78))
+	var paving := _sidewalk_material()
+	root.add_child(_make_ribbon(outer, inner, SIDEWALK_Y, Color(0.115, 0.13, 0.16), 0.78,
+			false, 0.0, paving))
+	root.add_child(_make_ribbon(-inner, -outer, SIDEWALK_Y, Color(0.115, 0.13, 0.16), 0.78,
+			false, 0.0, paving))
 	root.add_child(_make_ribbon(def.road_half_width + 0.75, def.road_half_width + 0.45, CURB_Y, Color(0.22, 0.24, 0.28), 0.62))
 	root.add_child(_make_ribbon(-(def.road_half_width + 0.45), -(def.road_half_width + 0.75), CURB_Y, Color(0.22, 0.24, 0.28), 0.62))
 	return root
+
+
+## Tiled city paving for the sidewalk ribbons (generated cel texture).
+func _sidewalk_material() -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	var albedo := _load_tex("%s/sidewalk_paving.png" % LOT_TEX_DIR)
+	if albedo != null:
+		m.albedo_texture = albedo
+	m.albedo_color = Color(0.82, 0.84, 0.88)
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE / 2.4
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	m.roughness = 0.85
+	var normal := _load_tex("%s/sidewalk_paving_normal.png" % LOT_TEX_DIR)
+	if normal != null:
+		m.normal_enabled = true
+		m.normal_texture = normal
+	var orm := _load_tex("%s/sidewalk_paving_orm.png" % LOT_TEX_DIR)
+	if orm != null:
+		m.roughness_texture = orm
+		m.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+		m.ao_enabled = true
+		m.ao_texture = orm
+		m.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+	return m
 
 
 func _make_puddles(rng: RandomNumberGenerator) -> Node3D:
@@ -565,20 +650,32 @@ func _make_ground() -> StaticBody3D:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(2000, 2000)
 	var mat := StandardMaterial3D.new()
-	var albedo: Texture2D = null if def.urban_canyon else _load_tex(def.terrain_albedo_path())
+	# The city has no terrain set: cover the ground with the tiled road asphalt
+	# so the outskirts read as worn asphalt/parking instead of a flat dark void.
+	var albedo: Texture2D = null
+	var normal: Texture2D = null
+	var orm: Texture2D = null
+	var tile := maxf(def.terrain_tile_size, 0.5)
+	if def.urban_canyon:
+		albedo = _load_tex("%s/city_ground.png" % LOT_TEX_DIR)
+		normal = _load_tex("%s/city_ground_normal.png" % LOT_TEX_DIR)
+		orm = _load_tex("%s/city_ground_orm.png" % LOT_TEX_DIR)
+		tile = 13.0
+	else:
+		albedo = _load_tex(def.terrain_albedo_path())
+		normal = _load_tex(def.terrain_normal_path())
+		orm = _load_tex(def.terrain_orm_path())
 	if albedo != null:
 		mat.albedo_texture = albedo
 		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 		# World-space triplanar keeps the terrain tile stable and seamless.
 		mat.uv1_triplanar = true
 		mat.uv1_world_triplanar = true
-		var ts := 1.0 / maxf(def.terrain_tile_size, 0.5)
+		var ts := 1.0 / tile
 		mat.uv1_scale = Vector3(ts, ts, ts)
-		var normal := _load_tex(def.terrain_normal_path())
 		if normal != null:
 			mat.normal_enabled = true
 			mat.normal_texture = normal
-		var orm := _load_tex(def.terrain_orm_path())
 		if orm != null:
 			mat.ao_enabled = true
 			mat.ao_texture = orm
@@ -586,9 +683,11 @@ func _make_ground() -> StaticBody3D:
 			mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
 			mat.metallic_texture = orm
 			mat.metallic_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_BLUE
+		if def.urban_canyon:
+			mat.albedo_color = Color(0.82, 0.83, 0.87)
 	else:
 		mat.albedo_color = Color(0.045, 0.055, 0.075) if def.urban_canyon else Color(0.24, 0.44, 0.23)
-	mat.roughness = 0.9 if def.urban_canyon else 1.0
+	mat.roughness = 0.95 if def.urban_canyon else 1.0
 	mat.metallic = 0.04 if def.urban_canyon else 0.0
 	plane.material = mat
 	mi.mesh = plane
@@ -1289,15 +1388,23 @@ func _make_buildings(rng: RandomNumberGenerator, occupied: Array[Vector3]) -> No
 	root.name = "Buildings"
 	var use_kit := def.urban_canyon and _kit_available()
 	var alley_slots: Array[Dictionary] = []
+	var cutout_slots: Array[Dictionary] = []
+	var lot_occupied: Array[Vector3] = []
 	if use_kit:
-		root.add_child(_make_street_front(rng, occupied, alley_slots))
+		_load_tree_kits()
+		root.add_child(_make_street_front(rng, occupied, alley_slots, cutout_slots))
+		# Sidewalk dressing (trees/kiosks) uses its own RNG so the wall layout
+		# is unaffected. Everything sits beyond the road edge.
+		var sw_rng := RandomNumberGenerator.new()
+		sw_rng.seed = def.decor_seed ^ 0x5A17
+		root.add_child(_make_sidewalk_props(sw_rng))
 		# Lots fill the empty band behind the street wall; their own RNG keeps
 		# the existing building layout unchanged. Lots are spaced only against
-		# each other (they sit behind the shallow front row), then folded into
-		# `occupied` so the 48 m belt keeps clear of them.
+		# each other (they sit behind the shallow front row); the second belt is
+		# spaced against lots but not the front row, so it can sit right behind
+		# the wall and show through every gap.
 		var lot_rng := RandomNumberGenerator.new()
 		lot_rng.seed = def.decor_seed ^ 0x1071
-		var lot_occupied: Array[Vector3] = []
 		var lot_i := 0
 		for spot in _place_city_lots(lot_rng, LOT_COUNT, lot_occupied):
 			var lot := _make_lot(lot_rng, spot, lot_i == 0)
@@ -1306,21 +1413,32 @@ func _make_buildings(rng: RandomNumberGenerator, occupied: Array[Vector3]) -> No
 				lot_i += 1
 				root.add_child(lot)
 		_make_alley_plazas(lot_rng, alley_slots, root)
-		occupied.append_array(lot_occupied)
+		_make_wall_cutouts(lot_rng, cutout_slots, root)
 	var spots: Array[Dictionary] = []
 	if def.urban_canyon:
-		spots = _place_city_buildings(rng, def.building_count, occupied)
+		var belt_occupied: Array[Vector3] = lot_occupied.duplicate()
+		spots = _place_city_buildings(rng, def.building_count, belt_occupied)
+		occupied.append_array(belt_occupied)
 	else:
+		occupied.append_array(lot_occupied)
 		spots = _place_decor(rng, def.building_count, def.building_min_lateral,
 				def.building_max_lateral, def.building_min_gap, occupied,
 				15.0)
 	if spots.is_empty():
+		_finish_trees(root)
 		return root
 	if use_kit:
+		var mats := _make_facade_materials()
+		var concrete := _make_concrete_material()
 		for spot in spots:
 			var b := _make_kit_building(rng, spot)
 			if b != null:
+				_bind_visibility_range(b, BELT_VIS_RANGE)
 				root.add_child(b)
+		# Cheap procedural mass fills the mid/far ground on both sides, and the
+		# compact pass squeezes small blocks into the narrow fold corridors.
+		root.add_child(_make_far_belt(rng, occupied, mats, concrete))
+		root.add_child(_make_compact_fill(rng, occupied, mats, concrete))
 		if def.skyline_count > 0:
 			var sky := Node3D.new()
 			sky.name = "Skyline"
@@ -1333,6 +1451,7 @@ func _make_buildings(rng: RandomNumberGenerator, occupied: Array[Vector3]) -> No
 			root.add_child(_make_building(rng, spot, mats, concrete))
 		if def.skyline_count > 0:
 			root.add_child(_make_skyline(rng, mats, occupied))
+	_finish_trees(root)
 	return root
 
 
@@ -1684,17 +1803,6 @@ func _spawn_static_car(def_path: String, pos: Vector3, yaw: float) -> Node3D:
 ## Billboard trees (city props) scattered on a lot pad away from the road.
 func _add_lot_trees(rng: RandomNumberGenerator, root: Node3D, idx: int,
 		base: Vector3, count: int) -> void:
-	var prop_dir := def.env_dir() + "/props"
-	var trees: Array[Texture2D] = []
-	var da := DirAccess.open(prop_dir)
-	if da != null:
-		for f in da.get_files():
-			if f.get_extension() == "png" and f.begins_with("tree"):
-				var tx := load(prop_dir + "/" + f) as Texture2D
-				if tx != null:
-					trees.append(tx)
-	if trees.is_empty():
-		return
 	var t := tangents[idx].normalized()
 	var sv := side_vector(idx)
 	# ring the trees around the pad so the centrepiece stays readable
@@ -1704,20 +1812,7 @@ func _add_lot_trees(rng: RandomNumberGenerator, root: Node3D, idx: int,
 		var rad := rng.randf_range(7.0, 9.5)
 		var p := base + t * sin(ang) * rad + sv * cos(ang) * rad
 		p.y = 0.0
-		var tex: Texture2D = trees[rng.randi() % trees.size()]
-		var h_m := rng.randf_range(5.5, 8.0)
-		var spr := Sprite3D.new()
-		spr.texture = tex
-		spr.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
-		spr.shaded = true
-		spr.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
-		spr.alpha_scissor_threshold = 0.18
-		spr.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-		spr.flip_h = rng.randf() < 0.5
-		spr.pixel_size = h_m / float(tex.get_height())
-		spr.position = Vector3(p.x, h_m * 0.5 - 0.03, p.z)
-		spr.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		root.add_child(spr)
+		_add_tree(rng, p, 5.5, 8.0)
 
 
 ## Recessed mini-plazas tucked into wide alleys of the street wall.
@@ -1741,6 +1836,329 @@ func _make_alley_plazas(rng: RandomNumberGenerator, slots: Array[Dictionary],
 			_bind_visibility_range(f)
 		elif f != null:
 			f.free()
+
+
+## --- Roadside dressing ------------------------------------------------------
+
+
+## Flat toon box (kiosk/bench parts); optional inverse-hull outline.
+func _add_toon_box(parent: Node3D, size: Vector3, color: Color, pos: Vector3,
+		yaw := 0.0, outline := -1.0) -> MeshInstance3D:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.rotation.y = yaw
+	mi.material_override = ToonMaterial.make(color, null, outline)
+	parent.add_child(mi)
+	return mi
+
+
+func _add_toon_cylinder(parent: Node3D, radius: float, height: float,
+		color: Color, pos: Vector3) -> MeshInstance3D:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.material_override = ToonMaterial.make(color, null, -1.0)
+	parent.add_child(mi)
+	return mi
+
+
+## Natural street-tree GLBs. The imported scenes are hierarchies of nodes with
+## their own scale/rotation (often Z-up) and several bark/leaf meshes, so the
+## whole instance is baked into one grounded, centred ArrayMesh per variant;
+## that single mesh is what the MultiMesh batches.
+func _load_tree_kits() -> void:
+	if _trees_loaded:
+		return
+	_trees_loaded = true
+	for id in TREE_KIT:
+		var path := "%s/%s.glb" % [TREE_KIT_DIR, id]
+		if not ResourceLoader.exists(path):
+			continue
+		var packed := load(path) as PackedScene
+		if packed == null:
+			continue
+		var inst := packed.instantiate() as Node3D
+		if inst == null:
+			continue
+		var mesh := _bake_tree_mesh(inst)
+		inst.free()
+		if mesh == null or mesh.get_surface_count() == 0:
+			continue
+		_tree_meshes.append(mesh)
+		_tree_heights.append(maxf(mesh.get_aabb().size.y, 1.0))
+		_tree_xforms.append([])
+
+
+## Flattens every MeshInstance3D under `root` into one ArrayMesh: node
+## transforms are baked into the vertices/normals, materials are converted to
+## the toon shaders and the mesh is recentred on X/Z with its base at y = 0.
+func _bake_tree_mesh(root: Node3D) -> ArrayMesh:
+	var surfaces: Array = []
+	var mn := Vector3(INF, INF, INF)
+	var mx := Vector3(-INF, -INF, -INF)
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var src: Mesh = (mi as MeshInstance3D).mesh
+		if src == null:
+			continue
+		var xf := _relative_transform(mi as Node3D, root)
+		for s in src.get_surface_count():
+			var arr := src.surface_get_arrays(s)
+			if arr.is_empty() or arr[Mesh.ARRAY_VERTEX] == null:
+				continue
+			var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			for i in verts.size():
+				var v: Vector3 = xf * verts[i]
+				verts[i] = v
+				mn = mn.min(v)
+				mx = mx.max(v)
+			var normals = arr[Mesh.ARRAY_NORMAL]
+			if normals != null:
+				for i in normals.size():
+					normals[i] = (xf.basis * normals[i]).normalized()
+			var tangents = arr[Mesh.ARRAY_TANGENT]
+			if tangents != null:
+				for i in range(0, tangents.size(), 4):
+					var t3 := (xf.basis * Vector3(tangents[i], tangents[i + 1],
+							tangents[i + 2])).normalized()
+					tangents[i] = t3.x
+					tangents[i + 1] = t3.y
+					tangents[i + 2] = t3.z
+			arr[Mesh.ARRAY_VERTEX] = verts
+			arr[Mesh.ARRAY_NORMAL] = normals
+			arr[Mesh.ARRAY_TANGENT] = tangents
+			surfaces.append({
+				"arrays": arr,
+				"material": _toon_tree_material(src.surface_get_material(s)),
+			})
+	if surfaces.is_empty():
+		return null
+	var offset := Vector3(-(mn.x + mx.x) * 0.5, -mn.y, -(mn.z + mx.z) * 0.5)
+	var out := ArrayMesh.new()
+	for sd in surfaces:
+		var arr: Array = sd["arrays"]
+		var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		for i in verts.size():
+			verts[i] += offset
+		arr[Mesh.ARRAY_VERTEX] = verts
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		out.surface_set_material(out.get_surface_count() - 1, sd["material"])
+	return out
+
+
+## Transform of `node` relative to ancestor `root` (root excluded).
+func _relative_transform(node: Node3D, root: Node3D) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var n: Node3D = node
+	while n != null and n != root:
+		t = n.transform * t
+		n = n.get_parent() as Node3D
+	return t
+
+
+## Toon counterpart for a baked tree surface. Alpha-cut / double-sided
+## materials (leaves, and bark shipped double-sided) get the foliage shader so
+## the leaf cut-outs survive; the rest use the standard cel material.
+func _toon_tree_material(m: Material) -> Material:
+	var base := m as BaseMaterial3D
+	if base == null:
+		return ToonMaterial.make(Color(0.25, 0.50, 0.22))
+	var foliage := base.cull_mode == BaseMaterial3D.CULL_DISABLED \
+			or base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED
+	if foliage:
+		return ToonMaterial.make_leaf(base.albedo_color, base.albedo_texture)
+	return ToonMaterial.from_base(base)
+
+
+## Queues one tree (variant picked by rng) at `pos` scaled to [h_min, h_max] m.
+func _add_tree(rng: RandomNumberGenerator, pos: Vector3, h_min: float,
+		h_max: float) -> void:
+	if _tree_meshes.is_empty():
+		return
+	var v := rng.randi() % _tree_meshes.size()
+	var s := rng.randf_range(h_min, h_max) / _tree_heights[v]
+	var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s, s))
+	_tree_xforms[v].append(Transform3D(basis, Vector3(pos.x, 0.0, pos.z)))
+
+
+## Builds one MultiMeshInstance3D per tree variant from the queued transforms.
+func _finish_trees(parent: Node3D) -> void:
+	for v in _tree_meshes.size():
+		var xforms: Array = _tree_xforms[v]
+		if xforms.is_empty():
+			continue
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = _tree_meshes[v]
+		mm.instance_count = xforms.size()
+		for i in xforms.size():
+			mm.set_instance_transform(i, xforms[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = "Trees_%d" % v
+		mmi.multimesh = mm
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		parent.add_child(mmi)
+		xforms.clear()
+
+
+## Everything along the sidewalk that fills the bare strip by the road: street
+## trees plus the occasional kiosk/bench/bin cluster. All of it sits well beyond
+## the road edge, so it never collides with the racing line.
+func _make_sidewalk_props(rng: RandomNumberGenerator) -> Node3D:
+	var root := Node3D.new()
+	root.name = "SidewalkProps"
+	var n := sample_count()
+	if n < 4:
+		return root
+	var total := _arc[n - 1] + centerline[n - 1].distance_to(centerline[0])
+	for side in [-1.0, 1.0]:
+		var s: float = side
+		var next := rng.randf_range(0.0, SIDEWALK_TREE_STEP)
+		var i := 0
+		while i < n and next < total - 8.0:
+			if _arc[i] < next:
+				i += 1
+				continue
+			var lat := def.road_half_width + SIDEWALK_TREE_LATERAL \
+					+ rng.randf_range(-0.6, 0.6)
+			var p := centerline[i] + side_vector(i) * s * lat
+			p.y = 0.0
+			_add_tree(rng, p, 4.2, 6.4)
+			next = _arc[i] + SIDEWALK_TREE_STEP \
+					+ rng.randf_range(-SIDEWALK_TREE_JITTER, SIDEWALK_TREE_JITTER)
+			i += 1
+	for side in [-1.0, 1.0]:
+		var s: float = side
+		var next := rng.randf_range(24.0, 50.0)
+		var i := 0
+		while i < n and next < total - 10.0:
+			if _arc[i] < next:
+				i += 1
+				continue
+			var lat := def.road_half_width + 4.2
+			var p := centerline[i] + side_vector(i) * s * lat
+			p.y = 0.0
+			_add_sidewalk_kiosk(rng, root, p, tangents[i].normalized(),
+					side_vector(i), s, tangent_yaw(i))
+			next = _arc[i] + SIDEWALK_KIOSK_STEP + rng.randf_range(-14.0, 14.0)
+			i += 1
+	return root
+
+
+func _add_sidewalk_kiosk(rng: RandomNumberGenerator, root: Node3D, p: Vector3,
+		t: Vector3, sv: Vector3, side: float, yaw: float) -> void:
+	var palette := [
+		Color(0.83, 0.30, 0.27), Color(0.20, 0.56, 0.66),
+		Color(0.90, 0.71, 0.26), Color(0.36, 0.66, 0.42),
+	]
+	var body: Color = palette[rng.randi() % palette.size()]
+	var dark := Color(0.13, 0.15, 0.19)
+	_add_toon_box(root, Vector3(2.6, 2.3, 2.2), body, p + Vector3.UP * 1.15, yaw)
+	_add_toon_box(root, Vector3(2.16, 1.05, 2.3), dark, p + Vector3.UP * 1.35, yaw)
+	_add_toon_box(root, Vector3(3.1, 0.16, 2.7), body.darkened(0.28),
+			p + Vector3.UP * 2.38, yaw)
+	_add_toon_box(root, Vector3(2.72, 0.34, 2.32), dark, p + Vector3.UP * 0.17, yaw)
+	# bench + bin toward the road
+	var wood := Color(0.34, 0.24, 0.17)
+	var bp := p - sv * side * 1.9 + t * 2.4
+	_add_toon_box(root, Vector3(1.7, 0.1, 0.45), wood, bp + Vector3.UP * 0.45, yaw)
+	_add_toon_box(root, Vector3(1.7, 0.42, 0.1), wood,
+			bp + sv * side * 0.2 + Vector3.UP * 0.68, yaw)
+	_add_toon_box(root, Vector3(0.09, 0.45, 0.42), dark,
+			bp + t * 0.72 + Vector3.UP * 0.22, yaw)
+	_add_toon_box(root, Vector3(0.09, 0.45, 0.42), dark,
+			bp - t * 0.72 + Vector3.UP * 0.22, yaw)
+	var bin := p - sv * side * 1.7 - t * 2.5
+	_add_toon_cylinder(root, 0.22, 0.8, Color(0.24, 0.27, 0.30),
+			bin + Vector3.UP * 0.4)
+
+
+## Open lots cut into the street wall so the content is visible from the road.
+func _make_wall_cutouts(rng: RandomNumberGenerator, slots: Array[Dictionary],
+		root: Node3D) -> void:
+	for slot in slots:
+		var idx := int(slot["idx"])
+		var side := float(slot["side"])
+		var t := tangents[idx].normalized()
+		var sv := side_vector(idx)
+		var depth := WALL_CUTOUT_DEPTH
+		var lat := def.road_half_width + 7.0 + depth * 0.5
+		var base := centerline[idx] + t * float(slot["along_shift"]) + sv * side * lat
+		base.y = 0.0
+		var width := float(slot["width"])
+		var pad := _lot_ground_material("plaza_pavement", 0.9, 5.0)
+		_add_lot_pad(root, idx, base, width, depth, pad, 0.02)
+		match rng.randi() % 3:
+			0:
+				_make_cutout_parking(rng, root, idx, base, t, sv, side)
+			1:
+				_make_cutout_skate(rng, root, idx, base)
+			_:
+				_make_cutout_plaza(rng, root, idx, base, t, sv, side)
+
+
+func _make_cutout_parking(rng: RandomNumberGenerator, root: Node3D, idx: int,
+		base: Vector3, t: Vector3, sv: Vector3, side: float) -> void:
+	var paint := StandardMaterial3D.new()
+	paint.albedo_color = Color(0.92, 0.92, 0.9)
+	paint.roughness = 0.7
+	for k in range(-1, 2):
+		_add_lot_pad(root, idx, base + t * float(k) * 3.3, 0.14,
+				WALL_CUTOUT_DEPTH * 0.7, paint, 0.10, 0.05)
+	var defs := _traffic_def_paths()
+	for c in mini(2, defs.size()):
+		var cp := base - sv * side * rng.randf_range(1.5, 3.5) \
+				+ t * rng.randf_range(-5.0, 5.0)
+		cp.y = 0.1
+		var car := _spawn_static_car(defs[c], cp, tangent_yaw(idx) + PI * 0.5)
+		if car != null:
+			root.add_child(car)
+
+
+func _make_cutout_skate(rng: RandomNumberGenerator, root: Node3D, idx: int,
+		base: Vector3) -> void:
+	var b := _spawn_lot_kit(rng, LOT_SKATE_MODEL, base + Vector3.UP * 0.05,
+			tangent_yaw(idx) + rng.randf_range(-0.15, 0.15),
+			rng.randf_range(0.95, 1.1), false)
+	if b != null and _building_clear(b):
+		root.add_child(b)
+		_bind_visibility_range(b)
+	elif b != null:
+		b.free()
+
+
+func _make_cutout_plaza(rng: RandomNumberGenerator, root: Node3D, idx: int,
+		base: Vector3, t: Vector3, sv: Vector3, side: float) -> void:
+	# small kiosk building at the back of the yard (existing NeonTown kit)
+	var kp := base + sv * side * WALL_CUTOUT_DEPTH * 0.3
+	kp.y = 0.0
+	var k := _spawn_lot_kit(rng, "store", kp + Vector3.UP * 0.05,
+			tangent_yaw(idx) + (PI if side < 0.0 else 0.0), 0.62, false)
+	if k != null and _building_clear(k):
+		root.add_child(k)
+		_bind_visibility_range(k)
+	elif k != null:
+		k.free()
+	var f := _spawn_lot_kit(rng, LOT_FOUNTAIN_MODEL, base + Vector3.UP * 0.05,
+			rng.randf(), rng.randf_range(1.6, 2.2), false)
+	if f != null and _building_clear(f):
+		root.add_child(f)
+		_bind_visibility_range(f)
+	elif f != null:
+		f.free()
+	_add_lot_trees(rng, root, idx, base, 3)
+	# a bench pair facing the road
+	var wood := Color(0.34, 0.24, 0.17)
+	for end_v in [-1.0, 1.0]:
+		var bp := base + t * float(end_v) * 6.0 - sv * side * 4.0
+		_add_toon_box(root, Vector3(1.7, 0.1, 0.45), wood,
+				bp + Vector3.UP * 0.45, tangent_yaw(idx))
 
 
 ## True when every building kit GLB is present and importable.
@@ -1830,16 +2248,18 @@ func _building_clear(root: Node3D) -> bool:
 ## would reach another stretch of road (the spline folds near itself) is
 ## skipped, leaving a natural gap.
 func _make_street_front(rng: RandomNumberGenerator, occupied: Array[Vector3],
-		alley_slots: Array[Dictionary]) -> Node3D:
+		alley_slots: Array[Dictionary], cutout_slots: Array[Dictionary]) -> Node3D:
 	var root := Node3D.new()
 	root.name = "StreetFront"
 	for side in [-1.0, 1.0]:
-		root.add_child(_make_street_front_side(rng, side, occupied, alley_slots))
+		root.add_child(_make_street_front_side(rng, side, occupied, alley_slots,
+				cutout_slots))
 	return root
 
 
 func _make_street_front_side(rng: RandomNumberGenerator, side: float,
-		occupied: Array[Vector3], alley_slots: Array[Dictionary]) -> Node3D:
+		occupied: Array[Vector3], alley_slots: Array[Dictionary],
+		cutout_slots: Array[Dictionary]) -> Node3D:
 	var root := Node3D.new()
 	var n := sample_count()
 	var sidewalk_outer := def.road_half_width + 7.0
@@ -1849,6 +2269,19 @@ func _make_street_front_side(rng: RandomNumberGenerator, side: float,
 	var placed_count := 0
 	while i < n and next_arc < total - 12.0:
 		if _arc[i] < next_arc:
+			i += 1
+			continue
+		# Deterministically replace every Nth slot with an open lot cut into the
+		# wall (no building), so its content is visible straight from the road.
+		if placed_count > 0 and placed_count % WALL_CUTOUT_PERIOD == 5:
+			cutout_slots.append({
+				"idx": i,
+				"side": side,
+				"width": WALL_CUTOUT_WIDTH,
+				"along_shift": WALL_CUTOUT_WIDTH * 0.5,
+			})
+			next_arc = _arc[i] + WALL_CUTOUT_WIDTH + 2.0
+			placed_count += 1
 			i += 1
 			continue
 		# Try a few variants at this spot: a building whose real footprint (as
@@ -1924,10 +2357,10 @@ func _front_row_gap_info(rng: RandomNumberGenerator) -> Dictionary:
 
 ## Fades front-row meshes out far from the camera; the skyline covers the
 ## horizon. Buildings keep casting shadows — the street reads as a real canyon.
-func _bind_visibility_range(node: Node3D) -> void:
+func _bind_visibility_range(node: Node3D, vis_range := FRONT_ROW_VIS_RANGE) -> void:
 	for child in node.find_children("*", "MeshInstance3D", true, false):
 		var mi := child as MeshInstance3D
-		mi.visibility_range_end = FRONT_ROW_VIS_RANGE
+		mi.visibility_range_end = vis_range
 		mi.visibility_range_end_margin = 48.0
 		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 
@@ -1988,7 +2421,7 @@ func _place_city_buildings(rng: RandomNumberGenerator, count: int,
 			if spots.size() >= count:
 				break
 			var t := float(j) / maxf(float(per_side - 1), 1.0)
-			for _attempt in 3:
+			for _attempt in 5:
 				var jitter := rng.randf_range(-1.0, 1.0) / maxf(float(per_side), 1.0)
 				var candidate_idx := clampi(first + int(float(last - first) * (t + jitter)), first, last)
 				var lateral := rng.randf_range(min_lateral, max_lateral)
@@ -2007,6 +2440,56 @@ func _place_city_buildings(rng: RandomNumberGenerator, count: int,
 				spots.append({"pos": p, "idx": candidate_idx, "lateral": lateral, "side": side})
 				break
 	return spots
+
+
+## --- Mid/far ground fill ---------------------------------------------------
+
+
+## Cheap procedural low/mid blocks filling the band between the kit belt and the
+## skyline so the dark asphalt never reads as a void when looking sideways.
+func _make_far_belt(rng: RandomNumberGenerator, occupied: Array[Vector3],
+		mats: Array[StandardMaterial3D], concrete: StandardMaterial3D) -> Node3D:
+	var root := Node3D.new()
+	root.name = "FarBelt"
+	var spots := _place_decor(rng, FAR_BELT_COUNT, FAR_BELT_LATERAL_MIN,
+			FAR_BELT_LATERAL_MAX, FAR_BELT_GAP, occupied, FAR_BELT_FOOTPRINT)
+	for spot in spots:
+		root.add_child(_make_mass_block(rng, spot, mats, concrete, 11.0, 20.0,
+				9.0, 26.0, FAR_BELT_VIS_RANGE))
+	return root
+
+
+## Small blocks that also fit the narrow corridors where the track folds back on
+## itself (front row and belts get rejected there), so those stretches get mass.
+func _make_compact_fill(rng: RandomNumberGenerator, occupied: Array[Vector3],
+		mats: Array[StandardMaterial3D], concrete: StandardMaterial3D) -> Node3D:
+	var root := Node3D.new()
+	root.name = "CompactFill"
+	var spots := _place_decor(rng, COMPACT_COUNT, COMPACT_LATERAL_MIN,
+			COMPACT_LATERAL_MAX, COMPACT_GAP, occupied, COMPACT_FOOTPRINT)
+	for spot in spots:
+		root.add_child(_make_mass_block(rng, spot, mats, concrete, 6.0, 11.0,
+				5.0, 10.0, COMPACT_VIS_RANGE))
+	return root
+
+
+## Plain facade box + roof slab (no rooftop clutter) for the filler passes.
+func _make_mass_block(rng: RandomNumberGenerator, spot: Dictionary,
+		mats: Array[StandardMaterial3D], concrete: StandardMaterial3D,
+		w_min: float, w_max: float, h_min: float, h_max: float,
+		vis_range: float) -> Node3D:
+	var root := Node3D.new()
+	var idx := int(spot["idx"])
+	root.position = spot["pos"]
+	root.rotation.y = tangent_yaw(idx) + rng.randf_range(-0.05, 0.05)
+	var w := rng.randf_range(w_min, w_max)
+	var d := rng.randf_range(w_min, w_max)
+	var h := rng.randf_range(h_min, h_max)
+	var mat: StandardMaterial3D = mats[rng.randi() % mats.size()]
+	_add_box(root, Vector3(w, h, d), mat, Vector3(0, h * 0.5, 0))
+	_add_box(root, Vector3(w + 0.3, 0.25, d + 0.3), concrete, Vector3(0, h + 0.1, 0))
+	_bind_visibility_range(root, vis_range)
+	return root
 
 
 func _make_skyline(rng: RandomNumberGenerator, mats: Array[StandardMaterial3D],

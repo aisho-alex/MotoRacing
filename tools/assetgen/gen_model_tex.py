@@ -62,6 +62,20 @@ SETS = {
         + g.QUALITY,
         0.82, 1.1,
     ),
+    "sidewalk_paving": (
+        g.STYLE_SURFACE,
+        "seamless tileable city sidewalk pavement, light warm grey concrete "
+        "paving slabs with thin darker joints and a few subtle stains, small "
+        "rectangular slabs, " + g.QUALITY,
+        0.82, 1.5,
+    ),
+    "city_ground": (
+        g.STYLE_SURFACE,
+        "seamless tileable weathered dark grey urban asphalt ground, coarse "
+        "aggregate, faint cracks and tar repair patches, pale oil stains and a "
+        "few faded yellow paint marks, " + g.QUALITY,
+        0.92, 1.7,
+    ),
 }
 
 
